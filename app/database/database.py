@@ -32,8 +32,7 @@ class Database:
 
         async with root_engine.connect() as conn:
             result = await conn.execute(
-                text("SELECT FROM pg_database WHERE datname = :name"),
-                {"name": settings.DB_NAME},
+                text(f"SELECT FROM pg_database WHERE datname = {settings.DB_NAME}")
             )
             if not result.scalar():
                 await conn.execute(text(f"CREATE DATABASE {settings.DB_NAME}"))
