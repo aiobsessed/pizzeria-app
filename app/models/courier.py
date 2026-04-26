@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Courier(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
-    is_available: Mapped[bool] = mapped_column(default=True)
+    is_available: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped[User] = relationship(back_populates="courier")
     orders: Mapped[list[Order]] = relationship(back_populates="courier")
