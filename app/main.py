@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from alembic import command
@@ -11,8 +12,9 @@ from app.database.database import db
 async def lifespan(app: FastAPI):
     await db.create_database_if_not_exist()
 
-    alembic_cfg = Config("alembic.ini")
-    command.upgrade(alembic_cfg, "head")
+    await asyncio.to_thread(
+        lambda: command.upgrade(Config("alembic.ini"), "head")
+    )
 
     yield
     await db.dispose()
