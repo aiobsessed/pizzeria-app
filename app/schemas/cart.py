@@ -18,7 +18,7 @@ class CartItemRead(CartItemBase):
 
 
 class CartItemUpdate(BaseModel):
-    quantity: int | None = None
+    quantity: int
 
 
 class CartRead(BaseModel):

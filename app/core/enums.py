@@ -23,3 +23,4 @@ class OrderStatus(str, Enum):
     preparing = "preparing"
     on_the_way = "on_the_way"
     delivered = "delivered"
+    canceled = "canceled"
