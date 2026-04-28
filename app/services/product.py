@@ -4,6 +4,7 @@ from app.models import Product
 from app.schemas import ProductCreate, ProductUpdate
 from app.repositories import ProductRepository, CategoryRepository
 
+
 class ProductService:
     def __init__(self, session: AsyncSession) -> None:
         self.product_repo = ProductRepository(session)
@@ -22,6 +23,10 @@ class ProductService:
         return await self.product_repo.get_by_id(product_id)
 
     async def create(self, data: ProductCreate) -> Product:
+        existing = await self.product_repo.get_by_name(data.name)
+        if existing:
+            raise ValueError("Product already exists")
+
         category = await self.category_repo.get_by_id(data.category_id)
         if category is None:
             raise ValueError("Category not found")

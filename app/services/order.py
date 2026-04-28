@@ -69,14 +69,13 @@ class OrderService:
         order = await self.order_repo.create(
             Order(user_id=user_id, total_price=total_price)
         )
-
+        
         for order_item in order_items:
             order_item.order_id = order.id
-            await self.order_item_repo.create(order_item)
+        await self.order_item_repo.bulk_create(order_items)
 
         # Удаляем корзину и позиции корзины после успешного создания заказа
-        for cart_item in cart_items:
-            await self.cart_item_repo.delete(cart_item)
+        await self.cart_item_repo.bulk_delete(cart_items)
         await self.cart_repo.delete(cart)
 
         return order

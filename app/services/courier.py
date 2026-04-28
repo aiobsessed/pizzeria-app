@@ -22,6 +22,9 @@ class CourierService:
         return await self.courier_repo.get_by_id(courier_id)
 
     async def create(self, data: CourierCreate) -> Courier:
+        existing = await self.courier_repo.get_by_user(data.user_id)
+        if existing:
+            raise ValueError("User is already courier")
         new_courier = Courier(**data.model_dump())
         return await self.courier_repo.create(new_courier)
 

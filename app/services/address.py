@@ -9,9 +9,9 @@ class AddressService:
     def __init__(self, session: AsyncSession) -> None:
         self.address_repo = AddressRepository(session)
 
-    async def _get_or_raise(self, address_id: int) -> Address:
+    async def _get_or_raise(self, user_id: int, address_id: int) -> Address:
         address = await self.get_by_id(address_id)
-        if address is None:
+        if address is None or address.user_id != user_id:
             raise ValueError("Address not found")
         return address
 
@@ -25,12 +25,14 @@ class AddressService:
         new_address = Address(user_id=user_id, **data.model_dump())
         return await self.address_repo.create(new_address)
 
-    async def update(self, address_id: int, data: AddressUpdate) -> Address:
-        address = await self._get_or_raise(address_id)
+    async def update(
+        self, user_id: int, address_id: int, data: AddressUpdate
+    ) -> Address:
+        address = await self._get_or_raise(user_id, address_id)
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(address, field, value)
         return await self.address_repo.update(address)
 
-    async def delete(self, address_id: int) -> None:
-        address = await self._get_or_raise(address_id)
+    async def delete(self, user_id: int, address_id: int) -> None:
+        address = await self._get_or_raise(user_id, address_id)
         await self.address_repo.delete(address)

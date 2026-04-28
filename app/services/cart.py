@@ -45,3 +45,15 @@ class CartService:
         if item is None:
             raise ValueError("Item not found")
         await self.cart_item_repo.delete(item)
+
+    async def clear(self, user_id: int) -> None:
+        cart = await self.cart_repo.get_by_user(user_id)
+        if cart is None:
+            raise ValueError("Cart is already empty")
+
+        cart_items = await self.cart_item_repo.get_by_cart(cart.id)
+        if not cart_items:
+            raise ValueError("Cart is already empty")
+
+        await self.cart_item_repo.bulk_delete(cart_items)
+        await self.cart_repo.delete(cart)

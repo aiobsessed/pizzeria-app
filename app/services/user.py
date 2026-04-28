@@ -14,6 +14,9 @@ class UserService:
         self.user_repo = UserRepository(session)
 
     async def create(self, data: UserCreate) -> User:
+        existing = await self.user_repo.get_by_email(data.email)
+        if existing:
+            raise ValueError("Email already registered")
         hashed_password = pwd_context.hash(data.password)
         new_user = User(
             **data.model_dump(exclude={"password"}), hashed_password=hashed_password

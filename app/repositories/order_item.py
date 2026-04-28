@@ -14,3 +14,7 @@ class OrderItemRepository(BaseRepository[OrderItem]):
             select(OrderItem).where(OrderItem.order_id == order_id)
         )
         return result.scalars().all()
+
+    async def bulk_create(self, items: list[OrderItem]) -> None:
+        self.session.add_all(items)
+        await self.session.flush() 

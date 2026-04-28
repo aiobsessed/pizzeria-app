@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -17,3 +17,8 @@ class CartItemRepository(BaseRepository[CartItem]):
             .options(selectinload(CartItem.product))
         )
         return result.scalars().all()
+
+    async def bulk_delete(self, items: list[CartItem]) -> None:
+        await self.session.execute(
+            delete(CartItem).where(CartItem.id.in_([item.id for item in items]))
+        )

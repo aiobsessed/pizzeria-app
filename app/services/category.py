@@ -25,6 +25,9 @@ class CategoryService:
         return await self.category_repo.get_by_slug(slug)
 
     async def create(self, data: CategoryCreate) -> Category:
+        existing = await self.category_repo.get_by_slug(data.slug)
+        if existing:
+            raise ValueError("Category already exists")
         new_category = Category(**data.model_dump())
         return await self.category_repo.create(new_category)
 
