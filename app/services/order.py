@@ -9,7 +9,7 @@ from app.repositories import (
     CartItemRepository,
     AddressRepository,
 )
-from app.core.enums import OrderStatus
+from app.core.enums import OrderStatus, DeliveryType
 
 
 class OrderService:
@@ -36,9 +36,10 @@ class OrderService:
         return await self.order_repo.get_by_user(user_id)
 
     async def create(self, user_id: int, data: OrderCreate) -> Order:
-        address = await self.address_repo.get_by_id(data.address_id)
-        if address is None or address.user_id != user_id:
-            raise ValueError("Address not found")
+        if data.delivery_type == DeliveryType.delivery:
+            address = await self.address_repo.get_by_id(data.address_id)
+            if address is None or address.user_id != user_id:
+                raise ValueError("Address not found")
 
         cart = await self.cart_repo.get_by_user(user_id)
         if cart is None:
@@ -67,9 +68,13 @@ class OrderService:
             )
 
         order = await self.order_repo.create(
-            Order(user_id=user_id, total_price=total_price)
+            Order(
+                user_id=user_id,
+                total_price=total_price,
+                **data.model_dump()
+            )
         )
-        
+
         for order_item in order_items:
             order_item.order_id = order.id
         await self.order_item_repo.bulk_create(order_items)
