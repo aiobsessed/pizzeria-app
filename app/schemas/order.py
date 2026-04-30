@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.core.enums import DeliveryType, OrderStatus, PaymentMethod
 
@@ -11,7 +11,7 @@ class OrderItemBase(BaseModel):
 
 
 class OrderItemCreate(OrderItemBase):
-    quantity: int | None = None
+    quantity: int = Field(default=1, ge=1)
 
 
 class OrderItemRead(OrderItemBase):

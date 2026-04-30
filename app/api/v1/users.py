@@ -15,10 +15,9 @@ async def get_me(user: User = Depends(get_current_user)) -> User:
 
 
 @router.patch("/me", response_model=UserRead)
-async def patch_me(
+async def update_me(
     data: UserUpdate,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> User:
-    user = await UserService(session).update(user, data)
-    return user
+    return await UserService(session).update(user, data)

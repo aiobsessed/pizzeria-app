@@ -1,19 +1,18 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 from app.core.enums import Role
 
 
 class UserBase(BaseModel):
-    name: str
+    name: str = Field(max_length=50)
     email: EmailStr
-    
 
 
 class UserCreate(UserBase):
-    phone: str | None = None
-    password: str
+    phone: str | None = Field(None, max_length=20)
+    password: str = Field(min_length=8)
 
 
 class UserRead(UserBase):
@@ -27,6 +26,7 @@ class UserRead(UserBase):
 
 
 class UserUpdate(BaseModel):
-    name: str | None = None
+    name: str | None = Field(None, max_length=50)
     email: EmailStr | None = None
-    phone: str | None = None
+    phone: str | None = Field(None, max_length=20)
+    password: str | None = Field(None, min_length=8)

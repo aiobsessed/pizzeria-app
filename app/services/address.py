@@ -21,6 +21,9 @@ class AddressService:
     async def get_by_id(self, address_id: int) -> Address | None:
         return await self.address_repo.get_by_id(address_id)
 
+    async def get_by_user(self, user_id: int) -> list[Address]:
+        return await self.address_repo.get_by_user(user_id)
+
     async def create(self, user_id: int, data: AddressCreate) -> Address:
         new_address = Address(user_id=user_id, **data.model_dump())
         return await self.address_repo.create(new_address)

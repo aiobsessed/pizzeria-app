@@ -16,9 +16,11 @@ class Address(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    street: Mapped[str] = mapped_column(String(150))
     city: Mapped[str] = mapped_column(String(50))
+    street: Mapped[str] = mapped_column(String(150))
+    house: Mapped[str] = mapped_column(String(20))
     apartment: Mapped[str | None] = mapped_column(String(20))
+    comment: Mapped[str | None] = mapped_column(String(255))
     is_deleted: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped[User] = relationship(back_populates="addresses")

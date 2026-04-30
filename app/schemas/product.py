@@ -1,20 +1,20 @@
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProductBase(BaseModel):
     category_id: int
-    name: str
-    weight: int
-    price: Decimal
+    name: str = Field(max_length=100)
+    weight: int = Field(ge=1)
+    price: Decimal = Field(ge=0)
 
 
 class ProductCreate(ProductBase):
     description: str | None = None
     composition: str | None = None
-    image_url: str | None = None
-    is_available: bool | None = None
+    image_url: str | None = Field(None, max_length=500)
+    is_available: bool = True
 
 
 class ProductRead(ProductBase):
@@ -29,10 +29,10 @@ class ProductRead(ProductBase):
 
 class ProductUpdate(BaseModel):
     category_id: int | None = None
-    name: str | None = None
-    weight: int | None = None
-    price: Decimal | None = None
+    name: str | None = Field(None, max_length=100)
+    weight: int | None = Field(None, ge=1)
+    price: Decimal | None = Field(None, ge=0)
     description: str | None = None
     composition: str | None = None
-    image_url: str | None = None
+    image_url: str | None = Field(None, max_length=500)
     is_available: bool | None = None

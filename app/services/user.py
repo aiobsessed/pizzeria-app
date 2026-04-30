@@ -36,11 +36,12 @@ class UserService:
         return await self.user_repo.create(new_user)
 
     async def update(self, user: User, data: UserUpdate) -> User:
-        for field, value in data.model_dump(exclude_none=True).items():
+        fields = data.model_dump(exclude_none=True, exclude={"password"})
+        for field, value in fields.items():
             setattr(user, field, value)
-        updated_user = await self.user_repo.update(user)
-        return updated_user
-
+        if data.password:
+            user.hashed_password = hash_password(data.password)
+        return await self.user_repo.update(user)
 
     async def get_by_id(self, user_id: int) -> User | None:
         return await self.user_repo.get_by_id(user_id)

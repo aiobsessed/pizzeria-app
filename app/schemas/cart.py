@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class CartItemBase(BaseModel):
@@ -6,7 +6,7 @@ class CartItemBase(BaseModel):
 
 
 class CartItemCreate(CartItemBase):
-    quantity: int | None = None
+    quantity: int = Field(default=1, ge=1)
 
 
 class CartItemRead(CartItemBase):
@@ -18,7 +18,7 @@ class CartItemRead(CartItemBase):
 
 
 class CartItemUpdate(BaseModel):
-    quantity: int
+    quantity: int = Field(ge=1)
 
 
 class CartRead(BaseModel):
