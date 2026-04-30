@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
 from app.repositories import UserRepository
-from app.schemas import UserCreate
+from app.schemas import UserCreate, UserUpdate
 from app.core.security import hash_password, verify_password
 
 
@@ -34,6 +34,13 @@ class UserService:
         )
 
         return await self.user_repo.create(new_user)
+
+    async def update(self, user: User, data: UserUpdate) -> User:
+        for field, value in data.model_dump(exclude_none=True).items():
+            setattr(user, field, value)
+        updated_user = await self.user_repo.update(user)
+        return updated_user
+
 
     async def get_by_id(self, user_id: int) -> User | None:
         return await self.user_repo.get_by_id(user_id)
