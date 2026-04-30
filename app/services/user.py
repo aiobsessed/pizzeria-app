@@ -23,10 +23,16 @@ class UserService:
         existing = await self.user_repo.get_by_email(data.email)
         if existing:
             raise ValueError("Email already registered")
+        if data.phone:
+            existing_phone = await self.user_repo.get_by_phone(data.phone)
+            if existing_phone:
+                raise ValueError("Phone already registered")
+
         hashed_password = hash_password(data.password)
         new_user = User(
             **data.model_dump(exclude={"password"}), hashed_password=hashed_password
         )
+
         return await self.user_repo.create(new_user)
 
     async def get_by_id(self, user_id: int) -> User | None:

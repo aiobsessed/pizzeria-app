@@ -19,7 +19,7 @@ async def register(data: UserCreate, session: AsyncSession = Depends(get_db)) ->
     return new_user
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenResponse)
 async def login(
     data: LoginRequest, session: AsyncSession = Depends(get_db)
 ) -> TokenResponse:
