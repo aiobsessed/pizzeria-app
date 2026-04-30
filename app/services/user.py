@@ -1,23 +1,29 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from passlib.context import CryptContext
 
 from app.models import User
 from app.repositories import UserRepository
 from app.schemas import UserCreate
-
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.core.security import hash_password, verify_password
 
 
 class UserService:
     def __init__(self, session: AsyncSession) -> None:
         self.user_repo = UserRepository(session)
 
+    async def authenticate(self, login: str, password: str) -> User:
+        if "@" in login:
+            user = await self.user_repo.get_by_email(login)
+        else:
+            user = await self.user_repo.get_by_phone(login)
+        if user is None or not verify_password(password, user.hashed_password):
+            raise ValueError("Invalid credentials")
+        return user
+
     async def create(self, data: UserCreate) -> User:
         existing = await self.user_repo.get_by_email(data.email)
         if existing:
             raise ValueError("Email already registered")
-        hashed_password = pwd_context.hash(data.password)
+        hashed_password = hash_password(data.password)
         new_user = User(
             **data.model_dump(exclude={"password"}), hashed_password=hashed_password
         )
