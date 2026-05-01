@@ -1,0 +1,27 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_current_user, get_db
+from app.models import Category
+from app.schemas import CategoryRead
+from app.services import CategoryService
+
+router = APIRouter(prefix="/categories", tags=['categories'])
+
+
+@router.get('/', response_model=list[CategoryRead])
+async def get_categories(
+    session: AsyncSession = Depends(get_db)
+) -> list[Category]:
+    return await CategoryService(session).get_all()
+
+
+@router.get('/{category_id}', response_model=CategoryRead)
+async def get_category(
+    category_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> Category:
+    try:
+        category = await CategoryService(session).get_by_id(category_id)
+    except ValueError as e:
+        raise HTTPException

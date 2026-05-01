@@ -20,17 +20,14 @@ class OrderService:
         self.cart_item_repo = CartItemRepository(session)
         self.address_repo = AddressRepository(session)
 
-    async def _get_or_raise(self, order_id: int) -> Order:
-        order = await self.get_by_id(order_id)
-        if order is None:
-            raise ValueError("Order not found")
-        return order
-
     async def get_all(self) -> list[Order]:
         return await self.order_repo.get_all()
 
-    async def get_by_id(self, order_id: int) -> Order | None:
-        return await self.order_repo.get_by_id(order_id)
+    async def get_by_id(self, order_id: int) -> Order:
+        order = await self.order_repo.get_by_id(order_id)
+        if order is None:
+            raise ValueError("Order not found")
+        return order
 
     async def get_by_user(self, user_id: int) -> list[Order]:
         return await self.order_repo.get_by_user(user_id)
@@ -68,11 +65,7 @@ class OrderService:
             )
 
         order = await self.order_repo.create(
-            Order(
-                user_id=user_id,
-                total_price=total_price,
-                **data.model_dump()
-            )
+            Order(user_id=user_id, total_price=total_price, **data.model_dump())
         )
 
         for order_item in order_items:
@@ -86,13 +79,13 @@ class OrderService:
         return order
 
     async def update(self, order_id: int, data: OrderUpdate) -> Order:
-        order = await self._get_or_raise(order_id)
+        order = await self.get_by_id(order_id)
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(order, field, value)
         return await self.order_repo.update(order)
 
     async def cancel(self, order_id: int) -> Order:
-        order = await self._get_or_raise(order_id)
+        order = await self.get_by_id(order_id)
         order.status = OrderStatus.canceled
         return await self.order_repo.update(order)
 
