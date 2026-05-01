@@ -9,6 +9,7 @@ from app.database.database import db
 from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
 from app.api.v1.addresses import router as addresses_router
+from app.api.v1.categories import router as categories_router
 
 
 @asynccontextmanager
@@ -25,3 +26,4 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(addresses_router, prefix="/api/v1")
+app.include_router(categories_router, prefix="/api/v1")

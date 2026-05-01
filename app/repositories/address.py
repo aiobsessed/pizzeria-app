@@ -11,6 +11,9 @@ class AddressRepository(BaseRepository[Address]):
 
     async def get_by_user(self, user_id: int) -> list[Address]:
         result = await self.session.execute(
-            select(Address).where(Address.user_id == user_id)
+            select(Address).where(
+                Address.user_id == user_id,
+                ~Address.is_deleted
+            )
         )
         return result.scalars().all()
