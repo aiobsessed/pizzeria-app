@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db
+from app.core.exceptions import NotFoundError
 from app.models import User, Address
 from app.schemas import AddressCreate, AddressRead, AddressUpdate
 from app.services import AddressService
@@ -36,7 +37,7 @@ async def update_address(
         updated_address = await AddressService(session).update(
             user.id, address_id, data
         )
-    except ValueError as e:
+    except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return updated_address
 
@@ -49,5 +50,5 @@ async def delete_address(
 ) -> None:
     try:
         await AddressService(session).delete(user.id, address_id)
-    except ValueError as e:
+    except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

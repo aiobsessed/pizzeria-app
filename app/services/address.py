@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import NotFoundError
 from app.models import Address
 from app.schemas import AddressCreate, AddressUpdate
 from app.repositories import AddressRepository
@@ -16,7 +17,7 @@ class AddressService:
     async def get_by_id(self, address_id: int) -> Address:
         address = await self.address_repo.get_by_id(address_id)
         if address is None:
-            raise ValueError("Address not found")
+            raise NotFoundError("Address not found")
         return address
 
     async def get_by_user(self, user_id: int) -> list[Address]:
@@ -31,7 +32,7 @@ class AddressService:
     ) -> Address:
         address = await self.get_by_id(address_id)
         if address.user_id != user_id or address.is_deleted:
-            raise ValueError("Address not found")
+            raise NotFoundError("Address not found")
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(address, field, value)
         return await self.address_repo.update(address)
@@ -40,6 +41,6 @@ class AddressService:
         """Soft delete — помечает адрес как удалённый вместо физического удаления."""
         address = await self.get_by_id(address_id)
         if address.user_id != user_id or address.is_deleted:
-            raise ValueError("Address not found")
+            raise NotFoundError("Address not found")
         address.is_deleted = True
         await self.address_repo.update(address)
