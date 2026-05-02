@@ -17,12 +17,12 @@ async def create_product(
     _: User = Depends(require_admin),
 ) -> Product:
     try:
-        product = await ProductService(session).create(data)
+        new_product = await ProductService(session).create(data)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
-    return product
+    return new_product
 
 
 @router.patch("/{product_id}", response_model=ProductRead)
@@ -33,10 +33,10 @@ async def update_product(
     _: User = Depends(require_admin),
 ) -> Product:
     try:
-        product = await ProductService(session).update(product_id, data)
+        updated_product = await ProductService(session).update(product_id, data)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return product
+    return updated_product
 
 
 @router.delete("/{product_id}", status_code=204)

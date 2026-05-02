@@ -18,10 +18,10 @@ async def update_category(
     _: User = Depends(require_admin),
 ) -> Category:
     try:
-        category = await CategoryService(session).update(category_id, data)
+        updated_category = await CategoryService(session).update(category_id, data)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return category
+    return updated_category
 
 
 @router.post("/", response_model=CategoryRead, status_code=201)
@@ -31,10 +31,10 @@ async def create_category(
     _: User = Depends(require_admin),
 ) -> Category:
     try:
-        category = await CategoryService(session).create(data)
+        new_category = await CategoryService(session).create(data)
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
-    return category
+    return new_category
 
 
 @router.delete("/{category_id}", status_code=204)
