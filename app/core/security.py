@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 
 from app.core.config import settings
+from app.core.exceptions import AuthError
 
 
 def hash_password(password: str) -> str:
@@ -39,5 +40,5 @@ def verify_token(token: str) -> dict:
             algorithms=settings.ALGORITHM,
         )
     except JWTError:
-        raise ValueError("Token is invalid")
+        raise AuthError("Token is invalid")
     return payload

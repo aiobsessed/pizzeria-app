@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ConflictError, NotFoundError, AuthError
 from app.models import User
 from app.repositories import UserRepository
 from app.schemas import UserCreate, UserUpdate
@@ -13,7 +14,7 @@ class UserService:
     async def get_by_id(self, user_id: int) -> User:
         user = await self.user_repo.get_by_id(user_id)
         if user is None:
-            raise ValueError("User not found")
+            raise NotFoundError("User not found")
         return user
 
     async def authenticate(self, login: str, password: str) -> User:
@@ -22,17 +23,17 @@ class UserService:
         else:
             user = await self.user_repo.get_by_phone(login)
         if user is None or not verify_password(password, user.hashed_password):
-            raise ValueError("Invalid credentials")
+            raise AuthError("Invalid credentials")
         return user
 
     async def create(self, data: UserCreate) -> User:
         existing = await self.user_repo.get_by_email(data.email)
         if existing:
-            raise ValueError("Email already registered")
+            raise ConflictError("Email already registered")
         if data.phone:
             existing_phone = await self.user_repo.get_by_phone(data.phone)
             if existing_phone:
-                raise ValueError("Phone already registered")
+                raise ConflictError("Phone already registered")
 
         hashed_password = hash_password(data.password)
         new_user = User(

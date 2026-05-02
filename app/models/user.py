@@ -3,8 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, DateTime
-from sqlalchemy import Enum as SAEnum
+from sqlalchemy import String, DateTime, Enum as SAEnum, func, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -23,10 +22,12 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(150), unique=True)
     phone: Mapped[str | None] = mapped_column(String(20))
     hashed_password: Mapped[str] = mapped_column(String(255))
-    role: Mapped[Role] = mapped_column(SAEnum(Role), default=Role.user)
-    is_blocked: Mapped[bool] = mapped_column(default=False)
+    role: Mapped[Role] = mapped_column(SAEnum(Role), default=Role.user, server_default="user")
+    is_blocked: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
     )
 
     addresses: Mapped[list[Address]] = relationship(back_populates="user")

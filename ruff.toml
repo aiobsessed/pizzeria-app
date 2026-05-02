@@ -1,2 +1,5 @@
+target-version = "py314"
+line-length = 99
+
 [lint.per-file-ignores]
 "__init__.py" = ["F401"]

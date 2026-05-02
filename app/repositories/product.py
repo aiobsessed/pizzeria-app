@@ -19,21 +19,20 @@ class ProductRepository(BaseRepository[Product]):
         )
         return result.scalars().all()
 
-    async def get_available_by_category(self, category_id) -> list[Product]:
+    async def get_by_name(self, name: str) -> Product | None:
+        result = await self.session.execute(select(Product).where(Product.name == name))
+        return result.scalar_one_or_none()
+
+    async def get_available_by_category(self, category_id: int) -> list[Product]:
         result = await self.session.execute(
             select(Product).where(
-                Product.category_id == category_id,
-                Product.is_available
+                Product.category_id == category_id, Product.is_available
             )
         )
         return result.scalars().all()
 
-    async def get_available_by_id(self, category_id: int) -> Product | None:
+    async def get_available_by_id(self, product_id: int) -> Product | None:
         result = await self.session.execute(
-            select(Product).where(Product.id == category_id, Product.is_available)
+            select(Product).where(Product.id == product_id, Product.is_available)
         )
-        return result.scalar_one_or_none()
-
-    async def get_by_name(self, name: str) -> Product | None:
-        result = await self.session.execute(select(Product).where(Product.name == name))
         return result.scalar_one_or_none()

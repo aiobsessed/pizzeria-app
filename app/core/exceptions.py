@@ -8,3 +8,7 @@ class ConflictError(ValueError):
 
 class BusinessError(ValueError):
     pass
+
+
+class AuthError(ValueError):
+    pass

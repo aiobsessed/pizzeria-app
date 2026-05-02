@@ -9,10 +9,6 @@ from app.repositories import AddressRepository
 class AddressService:
     def __init__(self, session: AsyncSession) -> None:
         self.address_repo = AddressRepository(session)
-        
-
-    async def get_all(self) -> list[Address]:
-        return await self.address_repo.get_all()
 
     async def get_by_id(self, address_id: int) -> Address:
         address = await self.address_repo.get_by_id(address_id)

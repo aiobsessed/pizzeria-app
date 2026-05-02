@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Numeric, String, Text
+from sqlalchemy import ForeignKey, Numeric, String, Text, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -21,6 +21,6 @@ class Product(Base):
     weight: Mapped[int] = mapped_column()
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     image_url: Mapped[str | None] = mapped_column(String(500))
-    is_available: Mapped[bool] = mapped_column(default=True)
+    is_available: Mapped[bool] = mapped_column(default=True, server_default=true())
 
     category: Mapped[Category] = relationship(back_populates="products")

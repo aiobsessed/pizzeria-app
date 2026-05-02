@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import String, ForeignKey, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -21,6 +21,6 @@ class Address(Base):
     house: Mapped[str] = mapped_column(String(20))
     apartment: Mapped[str | None] = mapped_column(String(20))
     comment: Mapped[str | None] = mapped_column(String(255))
-    is_deleted: Mapped[bool] = mapped_column(default=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, server_default=false())
 
     user: Mapped[User] = relationship(back_populates="addresses")

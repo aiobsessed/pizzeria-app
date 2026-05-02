@@ -54,4 +54,3 @@ class CartService:
             raise ConflictError("Cart is empty")
 
         await self.cart_item_repo.bulk_delete(cart.items)
-        await self.cart_repo.delete(cart)

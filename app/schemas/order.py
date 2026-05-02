@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.core.enums import DeliveryType, OrderStatus, PaymentMethod
 
@@ -27,6 +27,11 @@ class OrderBase(BaseModel):
 class OrderCreate(OrderBase):
     address_id: int | None = None
 
+    @model_validator(mode="after")
+    def address_required_for_delivery(self) -> "OrderCreate":
+        if self.delivery_type == DeliveryType.delivery and self.address_id is None:
+            raise ValueError("Address is required for delivery")
+        return self
 
 class OrderRead(OrderBase):
     id: int

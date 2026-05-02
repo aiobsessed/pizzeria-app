@@ -25,7 +25,7 @@ class CartItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     cart_id: Mapped[int] = mapped_column(ForeignKey("carts.id"))
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
-    quantity: Mapped[int] = mapped_column(default=1)
+    quantity: Mapped[int] = mapped_column(default=1, server_default="1")
 
     cart: Mapped[Cart] = relationship(back_populates="items")
     product: Mapped[Product] = relationship()

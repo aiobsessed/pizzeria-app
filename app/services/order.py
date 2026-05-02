@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import BusinessError, NotFoundError
 from app.models import Order, OrderItem
 from app.schemas import OrderCreate, OrderUpdate
 from app.repositories import (
@@ -26,7 +27,7 @@ class OrderService:
     async def get_by_id(self, order_id: int) -> Order:
         order = await self.order_repo.get_by_id(order_id)
         if order is None:
-            raise ValueError("Order not found")
+            raise NotFoundError("Order not found")
         return order
 
     async def get_by_user(self, user_id: int) -> list[Order]:
@@ -36,22 +37,24 @@ class OrderService:
         if data.delivery_type == DeliveryType.delivery:
             address = await self.address_repo.get_by_id(data.address_id)
             if address is None or address.user_id != user_id:
-                raise ValueError("Address not found")
+                raise NotFoundError("Address not found")
 
         cart = await self.cart_repo.get_by_user(user_id)
         if cart is None:
-            raise ValueError("Cart is empty")
+            raise BusinessError("Cart is empty")
 
         cart_items = await self.cart_item_repo.get_by_cart(cart.id)
         if not cart_items:
-            raise ValueError("Cart items not found")
+            raise NotFoundError("Cart items not found")
 
         order_items: list[OrderItem] = []
         total_price = 0
 
         for cart_item in cart_items:
             if not cart_item.product.is_available:
-                raise ValueError(f"Product '{cart_item.product.name}' is not available")
+                raise BusinessError(
+                    f"Product '{cart_item.product.name}' is not available"
+                )
 
             price = cart_item.product.price * cart_item.quantity
             total_price += price
