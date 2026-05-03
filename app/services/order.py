@@ -27,8 +27,11 @@ class OrderService:
     async def get_all_with_items(self) -> list[Order]:
         return await self.order_repo.get_all_with_items()
 
-    async def get_all_by_user(self, user_id: int) -> list[Order]:
-        return await self.order_repo.get_all_by_user(user_id)
+    async def get_by_user(self, user_id: int) -> list[Order]:
+        return await self.order_repo.get_by_user(user_id)
+
+    async def get_by_courier(self, courier_id: int) -> list[Order]:
+        return await self.order_repo.get_by_courier(courier_id)
 
     async def get_by_id_with_items(self, order_id: int) -> Order:
         order = await self.order_repo.get_by_id_with_items(order_id)
@@ -40,6 +43,15 @@ class OrderService:
         order = await self.get_by_id_with_items(order_id)
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(order, field, value)
+        return await self.order_repo.update(order)
+
+    async def deliver(self, courier_id: int, order_id: int) -> Order:
+        order = await self.order_repo.get_by_id_with_items(order_id)
+        if order is None or order.courier_id != courier_id:
+            raise NotFoundError("Order not found")
+        elif order.status == OrderStatus.delivered:
+            raise ConflictError("Order already delivered")
+        order.status = OrderStatus.delivered
         return await self.order_repo.update(order)
 
     async def cancel(self, order_id: int) -> Order:
@@ -111,7 +123,7 @@ class OrderService:
         if order.user_id != user_id:
             raise NotFoundError("Order not found")
         elif order.status == OrderStatus.canceled:
-            raise ConflictError("Order already caneled")
+            raise ConflictError("Order already canceled")
         elif order.status != OrderStatus.accepted:
             raise BusinessError("Cannot cancel the order at this stage")
         order.status = OrderStatus.canceled

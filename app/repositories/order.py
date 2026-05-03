@@ -18,7 +18,13 @@ class OrderRepository(BaseRepository[Order]):
         )
         return result.scalars().all()
 
-    async def get_all_by_user(self, user_id: int) -> list[Order]:
+    async def get_by_id_with_items(self, order_id: int) -> Order | None:
+        result = await self.session.execute(
+            select(Order).options(selectinload(Order.items)).where(Order.id == order_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_user(self, user_id: int) -> list[Order]:
         result = await self.session.execute(
             select(Order)
             .options(selectinload(Order.items))
@@ -27,9 +33,10 @@ class OrderRepository(BaseRepository[Order]):
         )
         return result.scalars().all()
 
-    async def get_by_id_with_items(self, order_id: int) -> Order | None:
+    async def get_by_courier(self, courier_id: int) -> list[Order]:
         result = await self.session.execute(
-            select(Order).where(Order.id == order_id).options(selectinload(Order.items))
+            select(Order)
+            .options(selectinload(Order.items))
+            .where(Order.courier_id == courier_id)
         )
-        return result.scalar_one_or_none()
-
+        return result.scalars().all()

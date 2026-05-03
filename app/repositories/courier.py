@@ -12,6 +12,12 @@ class CourierRepository(BaseRepository[Courier]):
 
     async def get_by_id_with_orders(self, courier_id: int) -> Courier | None:
         result = await self.session.execute(
-            select(Courier).where(Courier.id == courier_id).options(selectinload(Courier.orders))
+            select(Courier).options(selectinload(Courier.orders)).where(Courier.id == courier_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_user(self, user_id: int) -> Courier | None:
+        result = await self.session.execute(
+            select(Courier).where(Courier.user_id == user_id)
         )
         return result.scalar_one_or_none()

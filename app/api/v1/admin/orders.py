@@ -17,7 +17,7 @@ async def get_all_orders(
     _: User = Depends(require_admin),
 ) -> list[Order]:
     if user_id is not None:
-        return await OrderService(session).get_all_by_user(user_id)
+        return await OrderService(session).get_by_user(user_id)
     else:
         return await OrderService(session).get_all_with_items()
 
