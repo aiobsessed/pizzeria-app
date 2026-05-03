@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .exceptions import AuthError
 from .security import verify_token
 from .enums import Role
 from app.database.database import db
@@ -25,7 +26,7 @@ async def get_current_user(
     token = credentials.credentials
     try:
         payload = verify_token(token)
-    except ValueError:
+    except AuthError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user = await UserRepository(session).get_by_id(int(payload.get("sub")))

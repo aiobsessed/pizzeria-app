@@ -14,7 +14,7 @@ class ProductCreate(ProductBase):
     description: str | None = None
     composition: str | None = None
     image_url: str | None = Field(None, max_length=500)
-    is_available: bool
+    is_available: bool | None = None
 
 
 class ProductRead(ProductBase):

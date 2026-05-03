@@ -40,7 +40,7 @@ class ProductService:
         category = await self.category_repo.get_by_id(data.category_id)
         if category is None:
             raise NotFoundError("Category not found")
-        new_product = Product(**data.model_dump())
+        new_product = Product(**data.model_dump(exclude_none=True))
         return await self.product_repo.create(new_product)
 
     async def update(self, product_id: int, data: ProductUpdate) -> Product:
