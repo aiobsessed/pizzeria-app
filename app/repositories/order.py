@@ -18,6 +18,9 @@ class OrderRepository(BaseRepository[Order]):
 
     async def get_by_user(self, user_id: int) -> list[Order]:
         result = await self.session.execute(
-            select(Order).where(Order.user_id == user_id)
+            select(Order)
+            .options(selectinload(Order.items))
+            .where(Order.user_id == user_id)
+            .order_by(Order.created_at.desc())
         )
         return result.scalars().all()

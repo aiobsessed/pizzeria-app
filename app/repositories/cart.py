@@ -12,8 +12,6 @@ class CartRepository(BaseRepository[Cart]):
 
     async def get_by_user(self, user_id: int) -> Cart | None:
         result = await self.session.execute(
-            select(Cart)
-            .where(Cart.user_id == user_id)
-            .options(selectinload(Cart.items))
+            select(Cart).options(selectinload(Cart.items)).where(Cart.user_id == user_id)
         )
         return result.scalar_one_or_none()

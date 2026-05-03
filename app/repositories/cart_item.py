@@ -18,8 +18,8 @@ class CartItemRepository(BaseRepository[CartItem]):
     async def get_by_cart(self, cart_id: int) -> list[CartItem]:
         result = await self.session.execute(
             select(CartItem)
-            .where(CartItem.cart_id == cart_id)
             .options(selectinload(CartItem.product))
+            .where(CartItem.cart_id == cart_id)
         )
         return result.scalars().all()
 
