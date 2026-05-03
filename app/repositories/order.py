@@ -10,13 +10,15 @@ class OrderRepository(BaseRepository[Order]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(Order, session)
 
-    async def get_by_id_with_items(self, order_id: int) -> Order | None:
+    async def get_all_with_items(self) -> list[Order]:
         result = await self.session.execute(
-            select(Order).where(Order.id == order_id).options(selectinload(Order.items))
+            select(Order)
+            .options(selectinload(Order.items))
+            .order_by(Order.created_at.desc())
         )
-        return result.scalar_one_or_none()
+        return result.scalars().all()
 
-    async def get_by_user(self, user_id: int) -> list[Order]:
+    async def get_all_by_user(self, user_id: int) -> list[Order]:
         result = await self.session.execute(
             select(Order)
             .options(selectinload(Order.items))
@@ -24,3 +26,10 @@ class OrderRepository(BaseRepository[Order]):
             .order_by(Order.created_at.desc())
         )
         return result.scalars().all()
+
+    async def get_by_id_with_items(self, order_id: int) -> Order | None:
+        result = await self.session.execute(
+            select(Order).where(Order.id == order_id).options(selectinload(Order.items))
+        )
+        return result.scalar_one_or_none()
+

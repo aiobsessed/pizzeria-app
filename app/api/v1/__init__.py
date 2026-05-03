@@ -7,7 +7,8 @@ from .cart import router as cart_router
 from .orders import router as orders_router
 from .admin import (
     admin_categories_router,
-    admin_products_router
+    admin_products_router,
+    admin_orders_router
 )
 
 routers = [
@@ -22,4 +23,5 @@ routers = [
     # admin
     admin_categories_router,
     admin_products_router,
+    admin_orders_router,
 ]

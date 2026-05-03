@@ -24,17 +24,17 @@ class OrderService:
     # -----------------------
     # Admin methods
     # -----------------------
-    async def get_all(self) -> list[Order]:
-        return await self.order_repo.get_all()
+    async def get_all_with_items(self) -> list[Order]:
+        return await self.order_repo.get_all_with_items()
+
+    async def get_all_by_user(self, user_id: int) -> list[Order]:
+        return await self.order_repo.get_all_by_user(user_id)
 
     async def get_by_id_with_items(self, order_id: int) -> Order:
         order = await self.order_repo.get_by_id_with_items(order_id)
         if order is None:
             raise NotFoundError("Order not found")
         return order
-
-    async def get_by_user(self, user_id: int) -> list[Order]:
-        return await self.order_repo.get_by_user(user_id)
 
     async def update(self, order_id: int, data: OrderUpdate) -> Order:
         order = await self.get_by_id_with_items(order_id)
