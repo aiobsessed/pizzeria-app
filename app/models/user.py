@@ -20,7 +20,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(50))
     email: Mapped[str] = mapped_column(String(150), unique=True)
-    phone: Mapped[str | None] = mapped_column(String(20))
+    phone: Mapped[str] = mapped_column(String(20), unique=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
     role: Mapped[Role] = mapped_column(SAEnum(Role), default=Role.user, server_default="user")
     is_blocked: Mapped[bool] = mapped_column(default=False, server_default=false())

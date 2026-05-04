@@ -14,12 +14,9 @@ class CategoryService:
     # Admin methods
     # -----------------------
     async def get_all(
-        self,
-        is_active: bool | None = None,
-        slug: str | None = None,
-        name: str | None = None,
+        self, name: str | None = None, slug: str | None = None, is_active: bool | None = None
     ) -> list[Category]:
-        return await self.category_repo.get_all(is_active=is_active, slug=slug, name=name)
+        return await self.category_repo.get_all(name=name, slug=slug, is_active=is_active)
 
     async def get_by_id(self, category_id: int) -> Category:
         category = await self.category_repo.get_by_id(category_id)

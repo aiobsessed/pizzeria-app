@@ -12,9 +12,16 @@ router = APIRouter(prefix="/admin/couriers", tags=["couriers"])
 
 @router.get("/", response_model=list[CourierRead])
 async def get_couriers(
-    session: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+    name: str | None = None,
+    phone: str | None = None,
+    email: str | None = None,
+    is_available: bool | None = None,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
 ) -> list[Courier]:
-    return await CourierService(session).get_all()
+    return await CourierService(session).get_all(
+        name=name, phone=phone, email=email, is_available=is_available
+    )
 
 
 @router.get("/{courier_id}", response_model=CourierDetailRead)

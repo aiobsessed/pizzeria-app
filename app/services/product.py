@@ -17,11 +17,11 @@ class ProductService:
     async def get_all(
         self,
         category_id: int | None = None,
-        is_available: bool | None = None,
         name: str | None = None,
+        is_available: bool | None = None,
     ) -> list[Product]:
         return await self.product_repo.get_all(
-            category_id=category_id, is_available=is_available, name=name
+            category_id=category_id, name=name, is_available=is_available
         )
 
     async def get_by_id(self, product_id: int) -> Product:

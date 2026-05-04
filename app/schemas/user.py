@@ -8,16 +8,16 @@ from app.core.enums import Role
 class UserBase(BaseModel):
     name: str = Field(max_length=50)
     email: EmailStr
+    phone: str = Field(max_length=20)
+    password: str = Field(min_length=8)
 
 
 class UserCreate(UserBase):
-    phone: str | None = Field(None, max_length=20)
-    password: str = Field(min_length=8)
+    pass
 
 
 class UserRead(UserBase):
     id: int
-    phone: str | None
     role: Role
     is_blocked: bool
     created_at: datetime

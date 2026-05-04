@@ -13,13 +13,13 @@ router = APIRouter(prefix="/admin/products", tags=["products"])
 @router.get("/", response_model=list[ProductRead])
 async def get_products(
     category_id: int | None = None,
-    is_available: bool | None = None,
     name: str | None = None,
+    is_available: bool | None = None,
     session: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[Product]:
     return await ProductService(session).get_all(
-        category_id=category_id, is_available=is_available, name=name
+        category_id=category_id, name=name, is_available=is_available
     )
 
 

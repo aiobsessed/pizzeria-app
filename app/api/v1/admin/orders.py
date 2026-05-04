@@ -1,7 +1,9 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, require_admin
+from app.core.enums import DeliveryType, OrderStatus, PaymentMethod
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import Order, User
 from app.schemas import OrderRead, OrderUpdate
@@ -13,14 +15,24 @@ router = APIRouter(prefix="/admin/orders", tags=["orders"])
 @router.get("/", response_model=list[OrderRead])
 async def get_all_orders(
     user_id: int | None = None,
+    courier_id: int | None = None,
+    address_id: int | None = None,
+    delivery_type: DeliveryType | None = None,
+    payment_method: PaymentMethod | None = None,
+    status: OrderStatus | None = None,
+    created_at: datetime | None = None,
     session: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[Order]:
-    service = OrderService(session)
-    if user_id is not None:
-        return await service.get_by_user(user_id)
-    else:
-        return await service.get_all_with_items()
+    return await OrderService(session).get_all_with_items(
+        user_id=user_id,
+        courier_id=courier_id,
+        address_id=address_id,
+        delivery_type=delivery_type,
+        payment_method=payment_method,
+        status=status,
+        created_at=created_at,
+    )
 
 
 @router.get("/{order_id}", response_model=OrderRead)

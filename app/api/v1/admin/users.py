@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,9 +13,21 @@ router = APIRouter(prefix="/admin/users", tags=["users"])
 
 @router.get("/", response_model=list[UserRead])
 async def get_users(
-    session: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+    name: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
+    is_blocked: bool | None = None,
+    created_at: datetime | None = None,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
 ) -> list[User]:
-    return await UserService(session).get_all()
+    return await UserService(session).get_all(
+        name=name,
+        email=email,
+        phone=phone,
+        is_blocked=is_blocked,
+        created_at=created_at,
+    )
 
 
 @router.get("/{user_id}", response_model=UserRead)

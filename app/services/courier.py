@@ -13,8 +13,16 @@ class CourierService:
     # -----------------------
     # Admin methods
     # -----------------------
-    async def get_all(self) -> list[Courier]:
-        return await self.courier_repo.get_all()
+    async def get_all(
+        self,
+        name: str | None = None,
+        phone: str | None = None,
+        email: str | None = None,
+        is_available: bool | None = None,
+    ) -> list[Courier]:
+        return await self.courier_repo.get_all(
+            name=name, phone=phone, email=email, is_available=is_available
+        )
 
     async def get_by_id(self, courier_id: int) -> Courier:
         courier = await self.courier_repo.get_by_id(courier_id)

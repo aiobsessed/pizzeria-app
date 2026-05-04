@@ -12,16 +12,16 @@ class ProductRepository(BaseRepository[Product]):
     async def get_all(
         self,
         category_id: int | None = None,
-        is_available: bool | None = None,
         name: str | None = None,
+        is_available: bool | None = None,
     ) -> list[Product]:
         query = select(Product)
         if category_id is not None:
             query = query.where(Product.category_id == category_id)
-        if is_available is not None:
-            query = query.where(Product.is_available == is_available)
         if name is not None:
             query = query.where(Product.name.ilike(f"%{name}%"))
+        if is_available is not None:
+            query = query.where(Product.is_available == is_available)
         result = await self.session.execute(query)
         return result.scalars().all()
 

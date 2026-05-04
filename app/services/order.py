@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +12,7 @@ from app.repositories import (
     CartItemRepository,
     AddressRepository,
 )
-from app.core.enums import OrderStatus, DeliveryType
+from app.core.enums import OrderStatus, DeliveryType, PaymentMethod
 
 
 class OrderService:
@@ -25,11 +26,25 @@ class OrderService:
     # -----------------------
     # Admin methods
     # -----------------------
-    async def get_all_with_items(self) -> list[Order]:
-        return await self.order_repo.get_all_with_items()
-
-    async def get_by_user(self, user_id: int) -> list[Order]:
-        return await self.order_repo.get_by_user(user_id)
+    async def get_all_with_items(
+        self,
+        user_id: int | None = None,
+        courier_id: int | None = None,
+        address_id: int | None = None,
+        delivery_type: DeliveryType | None = None,
+        payment_method: PaymentMethod | None = None,
+        status: OrderStatus | None = None,
+        created_at: datetime | None = None,
+    ) -> list[Order]:
+        return await self.order_repo.get_all_with_items(
+            user_id=user_id,
+            courier_id=courier_id,
+            address_id=address_id,
+            delivery_type=delivery_type,
+            payment_method=payment_method,
+            status=status,
+            created_at=created_at,
+        )
 
     async def get_by_courier(self, courier_id: int) -> list[Order]:
         return await self.order_repo.get_by_courier(courier_id)

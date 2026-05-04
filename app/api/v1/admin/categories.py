@@ -12,13 +12,13 @@ router = APIRouter(prefix="/admin/categories", tags=["categories"])
 
 @router.get("/", response_model=list[CategoryRead])
 async def get_all(
-    is_active: bool | None = None,
-    slug: str | None = None,
     name: str | None = None,
+    slug: str | None = None,
+    is_active: bool | None = None,
     session: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[Category]:
-    return await CategoryService(session).get_all(is_active=is_active, slug=slug, name=name)
+    return await CategoryService(session).get_all(name=name, slug=slug, is_active=is_active)
 
 
 @router.get("/{category_id}", response_model=CategoryRead)

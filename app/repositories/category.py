@@ -10,18 +10,15 @@ class CategoryRepository(BaseRepository[Category]):
         super().__init__(Category, session)
 
     async def get_all(
-        self,
-        is_active: bool | None = None,
-        slug: str | None = None,
-        name: str | None = None,
+        self, name: str | None = None, slug: str | None = None, is_active: bool | None = None
     ) -> list[Category]:
         query = select(Category)
-        if is_active is not None:
-            query = query.where(Category.is_active == is_active)
-        if slug is not None:
-            query = query.where(Category.slug == slug)
         if name is not None:
             query = query.where(Category.name.ilike(f"%{name}%"))
+        if slug is not None:
+            query = query.where(Category.slug == slug)
+        if is_active is not None:
+            query = query.where(Category.is_active == is_active)
         result = await self.session.execute(query)
         return result.scalars().all()
 
