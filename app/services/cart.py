@@ -12,6 +12,9 @@ class CartService:
         self.cart_item_repo = CartItemRepository(session)
         self.product_repo = ProductRepository(session)
 
+    # -----------------------
+    # Admin methods
+    # -----------------------
     async def get_by_user(self, user_id: int) -> Cart:
         cart = await self.cart_repo.get_by_user(user_id)
         if cart is None:
@@ -19,6 +22,9 @@ class CartService:
             cart = await self.cart_repo.create(new_cart)
         return cart
 
+    # -----------------------
+    #  User methods
+    # -----------------------
     async def add_item(self, user_id: int, data: CartItemCreate) -> CartItem:
         product = await self.product_repo.get_by_id(data.product_id)
         if product is None:

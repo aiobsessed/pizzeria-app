@@ -11,23 +11,17 @@ class ProductService:
         self.product_repo = ProductRepository(session)
         self.category_repo = CategoryRepository(session)
 
+    # -----------------------
+    # Admin methods
+    # -----------------------
     async def get_all(self) -> list[Product]:
         return await self.product_repo.get_all()
-
-    async def get_all_available(self) -> list[Product]:
-        return await self.product_repo.get_all_available()
-
-    async def get_available_by_category(self, category_id: int) -> list[Product]:
-        return await self.product_repo.get_available_by_category(category_id)
-
+    
+    # -----------------------
+    # Admin methods
+    # -----------------------
     async def get_by_id(self, product_id: int) -> Product:
         product = await self.product_repo.get_by_id(product_id)
-        if product is None:
-            raise NotFoundError("Product not found")
-        return product
-
-    async def get_available_by_id(self, product_id: int) -> Product:
-        product = await self.product_repo.get_available_by_id(product_id)
         if product is None:
             raise NotFoundError("Product not found")
         return product
@@ -60,3 +54,18 @@ class ProductService:
             raise ConflictError("Product is already unavailable")
         product.is_available = False
         await self.product_repo.update(product)
+
+    # -----------------------
+    # User methods
+    # -----------------------
+    async def get_all_available(self) -> list[Product]:
+        return await self.product_repo.get_all_available()
+
+    async def get_available_by_category(self, category_id: int) -> list[Product]:
+        return await self.product_repo.get_available_by_category(category_id)
+
+    async def get_available_by_id(self, product_id: int) -> Product:
+        product = await self.product_repo.get_available_by_id(product_id)
+        if product is None:
+            raise NotFoundError("Product not found")
+        return product

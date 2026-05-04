@@ -10,6 +10,9 @@ class AddressService:
     def __init__(self, session: AsyncSession) -> None:
         self.address_repo = AddressRepository(session)
 
+    # -----------------------
+    # Admin methods
+    # -----------------------
     async def get_by_id(self, address_id: int) -> Address:
         address = await self.address_repo.get_by_id(address_id)
         if address is None:
@@ -18,7 +21,10 @@ class AddressService:
 
     async def get_by_user(self, user_id: int) -> list[Address]:
         return await self.address_repo.get_by_user(user_id)
-
+    
+    # -----------------------
+    # User methods
+    # -----------------------
     async def create(self, user_id: int, data: AddressCreate) -> Address:
         new_address = Address(user_id=user_id, **data.model_dump())
         return await self.address_repo.create(new_address)

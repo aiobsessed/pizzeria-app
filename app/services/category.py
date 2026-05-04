@@ -10,20 +10,14 @@ class CategoryService:
     def __init__(self, session: AsyncSession) -> None:
         self.category_repo = CategoryRepository(session)
 
+    # -----------------------
+    # Admin methods
+    # -----------------------
     async def get_all(self) -> list[Category]:
         return await self.category_repo.get_all()
 
-    async def get_all_active(self) -> list[Category]:
-        return await self.category_repo.get_all_active()
-
     async def get_by_id(self, category_id: int) -> Category:
         category = await self.category_repo.get_by_id(category_id)
-        if category is None:
-            raise NotFoundError("Category not found")
-        return category
-
-    async def get_active_by_id(self, category_id: int) -> Category:
-        category = await self.category_repo.get_active_by_id(category_id)
         if category is None:
             raise NotFoundError("Category not found")
         return category
@@ -51,3 +45,15 @@ class CategoryService:
             raise ConflictError("Category is no longer active")
         category.is_active = False
         await self.category_repo.update(category)
+
+    # -----------------------
+    # User methods
+    # -----------------------
+    async def get_all_active(self) -> list[Category]:
+        return await self.category_repo.get_all_active()
+
+    async def get_active_by_id(self, category_id: int) -> Category:
+        category = await self.category_repo.get_active_by_id(category_id)
+        if category is None:
+            raise NotFoundError("Category not found")
+        return category

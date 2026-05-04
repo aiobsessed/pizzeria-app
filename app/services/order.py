@@ -89,20 +89,18 @@ class OrderService:
 
         for cart_item in cart_items:
             if not cart_item.product.is_available:
-                raise BusinessError(
-                    f"Product '{cart_item.product.name}' is not available"
-                )
-
-            price = cart_item.product.price * cart_item.quantity
-            total_price += price
+                raise BusinessError(f"Product '{cart_item.product.name}' is not available")
 
             order_items.append(
                 OrderItem(
                     product_id=cart_item.product_id,
                     quantity=cart_item.quantity,
-                    price_at_order=price,
+                    price_at_order=cart_item.product.price,
                 )
             )
+
+            item_total = cart_item.product.price * cart_item.quantity
+            total_price += item_total
 
         order = await self.order_repo.create(
             Order(user_id=user_id, total_price=total_price, **data.model_dump())

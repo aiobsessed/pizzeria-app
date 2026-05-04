@@ -11,12 +11,26 @@ class UserService:
     def __init__(self, session: AsyncSession) -> None:
         self.user_repo = UserRepository(session)
 
+    # -----------------------
+    # Admin methods
+    # -----------------------
+    async def get_all(self) -> list[User]:
+        return await self.user_repo.get_all()
+
     async def get_by_id(self, user_id: int) -> User:
         user = await self.user_repo.get_by_id(user_id)
         if user is None:
             raise NotFoundError("User not found")
         return user
 
+    async def block(self, user_id: int) -> User:
+        user = await self.get_by_id(user_id)
+        user.is_blocked = not user.is_blocked
+        return await self.user_repo.update(user)
+        
+    # -----------------------
+    # User methods
+    # -----------------------
     async def authenticate(self, login: str, password: str) -> User:
         if "@" in login:
             user = await self.user_repo.get_by_email(login)
