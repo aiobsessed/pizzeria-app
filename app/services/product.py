@@ -17,23 +17,27 @@ class ProductService:
     async def get_all(self) -> list[Product]:
         return await self.product_repo.get_all()
 
-    # -----------------------
-    # Admin methods
-    # -----------------------
     async def get_by_id(self, product_id: int) -> Product:
         product = await self.product_repo.get_by_id(product_id)
         if product is None:
             raise NotFoundError("Product not found")
         return product
 
+    async def get_by_name(self, product_name: str) -> Product:
+        product = await self.product_repo.get_by_name(product_name)
+        if product is None:
+            raise NotFoundError("Product not found")
+        return product
+
     async def create(self, data: ProductCreate) -> Product:
-        existing = await self.product_repo.get_by_name(data.name)
-        if existing:
-            raise ConflictError("Product already exists")
+        name = await self.product_repo.get_by_name(data.name)
+        if name is not None:
+            raise ConflictError("That name is already taken")
 
         category = await self.category_repo.get_by_id(data.category_id)
         if category is None:
             raise NotFoundError("Category not found")
+
         new_product = Product(**data.model_dump(exclude_none=True))
         return await self.product_repo.create(new_product)
 
@@ -42,7 +46,13 @@ class ProductService:
             category = await self.category_repo.get_by_id(data.category_id)
             if category is None:
                 raise NotFoundError("Category not found")
+
         product = await self.get_by_id(product_id)
+        if data.name and data.name != product.name:
+            name = await self.product_repo.get_by_name(data.name)
+            if name is not None:
+                raise ConflictError("That name is already taken")
+
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(product, field, value)
         return await self.product_repo.update(product)

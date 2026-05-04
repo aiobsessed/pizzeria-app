@@ -55,6 +55,10 @@ class UserService:
         return await self.user_repo.create(new_user)
 
     async def update(self, user: User, data: UserUpdate) -> User:
+        if data.email and data.email != user.email:
+            email = await self.user_repo.get_by_email(data.email)
+            if email is not None:
+                raise ConflictError("Email already registered")
         fields = data.model_dump(exclude_none=True, exclude={"password"})
         for field, value in fields.items():
             setattr(user, field, value)

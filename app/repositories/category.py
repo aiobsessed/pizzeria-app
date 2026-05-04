@@ -15,15 +15,14 @@ class CategoryRepository(BaseRepository[Category]):
 
     async def get_active_by_id(self, category_id: int) -> Category | None:
         result = await self.session.execute(
-            select(Category).where(
-                Category.id == category_id,
-                Category.is_active
-            )
+            select(Category).where(Category.id == category_id, Category.is_active)
         )
         return result.scalar_one_or_none()
 
     async def get_by_slug(self, slug: str) -> Category | None:
-        result = await self.session.execute(
-            select(Category).where(Category.slug == slug)
-        )
+        result = await self.session.execute(select(Category).where(Category.slug == slug))
+        return result.scalar_one_or_none()
+
+    async def get_by_name(self, name: str) -> Category | None:
+        result = await self.session.execute(select(Category).where(Category.name == name))
         return result.scalar_one_or_none()

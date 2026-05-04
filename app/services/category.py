@@ -22,18 +22,42 @@ class CategoryService:
             raise NotFoundError("Category not found")
         return category
 
-    async def get_by_slug(self, slug: str) -> Category | None:
-        return await self.category_repo.get_by_slug(slug)
+    async def get_by_name(self, name: str) -> Category:
+        category = await self.category_repo.get_by_name(name)
+        if category is None:
+            raise NotFoundError("Category not found")
+        return category
+
+    async def get_by_slug(self, slug: str) -> Category:
+        category = await self.category_repo.get_by_slug(slug)
+        if category is None:
+            raise NotFoundError("Category not found")
+        return category
 
     async def create(self, data: CategoryCreate) -> Category:
-        existing = await self.category_repo.get_by_slug(data.slug)
-        if existing:
-            raise ConflictError("Category already exists")
+        name = await self.category_repo.get_by_name(data.name)
+        if name is not None:
+            raise ConflictError("That name is already taken")
+
+        slug = await self.category_repo.get_by_slug(data.slug)
+        if slug is not None:
+            raise ConflictError("That slug is already taken")
+
         new_category = Category(**data.model_dump())
         return await self.category_repo.create(new_category)
 
     async def update(self, category_id: int, data: CategoryUpdate) -> Category:
         category = await self.get_by_id(category_id)
+        if data.name and data.name != category.name:
+            name = await self.category_repo.get_by_name(data.name)
+            if name is not None:
+                raise ConflictError("That name is already taken")
+
+        if data.slug and data.slug != category.slug:
+            slug = await self.category_repo.get_by_slug(data.slug)
+            if slug is not None:
+                raise ConflictError("That slug is already taken")
+
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(category, field, value)
         return await self.category_repo.update(category)

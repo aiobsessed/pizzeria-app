@@ -16,10 +16,11 @@ async def get_all_orders(
     session: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> list[Order]:
+    service = OrderService(session)
     if user_id is not None:
-        return await OrderService(session).get_by_user(user_id)
+        return await service.get_by_user(user_id)
     else:
-        return await OrderService(session).get_all_with_items()
+        return await service.get_all_with_items()
 
 
 @router.get("/{order_id}", response_model=OrderRead)
