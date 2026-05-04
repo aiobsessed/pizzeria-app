@@ -21,7 +21,7 @@ class AddressService:
 
     async def get_by_user(self, user_id: int) -> list[Address]:
         return await self.address_repo.get_by_user(user_id)
-    
+
     # -----------------------
     # User methods
     # -----------------------
@@ -29,9 +29,7 @@ class AddressService:
         new_address = Address(user_id=user_id, **data.model_dump())
         return await self.address_repo.create(new_address)
 
-    async def update(
-        self, user_id: int, address_id: int, data: AddressUpdate
-    ) -> Address:
+    async def update(self, user_id: int, address_id: int, data: AddressUpdate) -> Address:
         address = await self.get_by_id(address_id)
         if address.user_id != user_id or address.is_deleted:
             raise NotFoundError("Address not found")

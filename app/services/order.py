@@ -1,3 +1,4 @@
+from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
@@ -87,7 +88,7 @@ class OrderService:
             raise BusinessError("Cart items not found")
 
         order_items: list[OrderItem] = []
-        total_price = 0
+        total_price = Decimal(0)
 
         for cart_item in cart_items:
             if not cart_item.product.is_available:

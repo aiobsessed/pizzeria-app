@@ -27,7 +27,7 @@ class UserService:
         user = await self.get_by_id(user_id)
         user.is_blocked = not user.is_blocked
         return await self.user_repo.update(user)
-        
+
     # -----------------------
     # User methods
     # -----------------------
@@ -50,9 +50,7 @@ class UserService:
                 raise ConflictError("Phone already registered")
 
         hashed_password = hash_password(data.password)
-        new_user = User(
-            **data.model_dump(exclude={"password"}), hashed_password=hashed_password
-        )
+        new_user = User(**data.model_dump(exclude={"password"}), hashed_password=hashed_password)
 
         return await self.user_repo.create(new_user)
 

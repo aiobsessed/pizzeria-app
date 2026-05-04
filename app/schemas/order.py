@@ -33,6 +33,7 @@ class OrderCreate(OrderBase):
             raise ValueError("Address is required for delivery")
         return self
 
+
 class OrderRead(OrderBase):
     id: int
     user_id: int

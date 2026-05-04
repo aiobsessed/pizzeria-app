@@ -16,7 +16,7 @@ class ProductService:
     # -----------------------
     async def get_all(self) -> list[Product]:
         return await self.product_repo.get_all()
-    
+
     # -----------------------
     # Admin methods
     # -----------------------
