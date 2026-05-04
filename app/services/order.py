@@ -51,6 +51,8 @@ class OrderService:
             raise NotFoundError("Order not found")
         elif order.status == OrderStatus.delivered:
             raise ConflictError("Order already delivered")
+        elif order.status == OrderStatus.canceled:
+            raise ConflictError("Order has already been canceled")
         order.status = OrderStatus.delivered
         return await self.order_repo.update(order)
 
