@@ -8,7 +8,7 @@ from .exceptions import AuthError
 from .security import verify_token
 from .enums import Role
 from app.database.database import db
-from app.models import User
+from app.models import User, Courier
 from app.repositories import UserRepository, CourierRepository
 
 security = HTTPBearer()
@@ -44,9 +44,11 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
 
 async def require_courier(
     user: User = Depends(get_current_user), session: AsyncSession = Depends(get_db)
-) -> User:
+) -> Courier:
     if user.role != Role.courier:
         raise HTTPException(status_code=403, detail="Access forbidden")
 
     courier = await CourierRepository(session).get_by_user(user.id)
+    if courier is None:
+        raise HTTPException(status_code=403, detail="Access forbidden")
     return courier
