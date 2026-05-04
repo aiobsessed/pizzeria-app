@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class Product(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
-    name: Mapped[str] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str | None] = mapped_column(Text)
     composition: Mapped[str | None] = mapped_column(Text)
     weight: Mapped[int] = mapped_column()
