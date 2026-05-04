@@ -10,6 +10,30 @@ from app.services import ProductService
 router = APIRouter(prefix="/admin/products", tags=["products"])
 
 
+@router.get("/", response_model=list[ProductRead])
+async def get_products(
+    category_id: int | None = None,
+    is_available: bool | None = None,
+    name: str | None = None,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> list[Product]:
+    return await ProductService(session).get_all(
+        category_id=category_id, is_available=is_available, name=name
+    )
+
+
+@router.get("/{product_id}", response_model=ProductRead)
+async def get_product(
+    product_id: int, session: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+) -> Product:
+    try:
+        product = await ProductService(session).get_by_id(product_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return product
+
+
 @router.post("/", response_model=ProductRead, status_code=201)
 async def create_product(
     data: ProductCreate,

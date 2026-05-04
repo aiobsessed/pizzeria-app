@@ -10,18 +10,26 @@ from app.services import CategoryService
 router = APIRouter(prefix="/admin/categories", tags=["categories"])
 
 
-@router.patch("/{category_id}", response_model=CategoryRead)
-async def update_category(
-    category_id: int,
-    data: CategoryUpdate,
+@router.get("/", response_model=list[CategoryRead])
+async def get_all(
+    is_active: bool | None = None,
+    slug: str | None = None,
+    name: str | None = None,
     session: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
+) -> list[Category]:
+    return await CategoryService(session).get_all(is_active=is_active, slug=slug, name=name)
+
+
+@router.get("/{category_id}", response_model=CategoryRead)
+async def get_category(
+    category_id: int, session: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
 ) -> Category:
     try:
-        updated_category = await CategoryService(session).update(category_id, data)
+        category = await CategoryService(session).get_by_id(category_id)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return updated_category
+    return category
 
 
 @router.post("/", response_model=CategoryRead, status_code=201)
@@ -35,6 +43,20 @@ async def create_category(
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
     return new_category
+
+
+@router.patch("/{category_id}", response_model=CategoryRead)
+async def update_category(
+    category_id: int,
+    data: CategoryUpdate,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> Category:
+    try:
+        updated_category = await CategoryService(session).update(category_id, data)
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return updated_category
 
 
 @router.delete("/{category_id}", status_code=204)

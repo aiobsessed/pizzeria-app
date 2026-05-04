@@ -15,12 +15,10 @@ async def get_categories(session: AsyncSession = Depends(get_db)) -> list[Catego
     return await CategoryService(session).get_all_active()
 
 
-@router.get("/{category_id}", response_model=CategoryRead)
-async def get_category(
-    category_id: int, session: AsyncSession = Depends(get_db)
-) -> Category:
+@router.get("/{slug}", response_model=CategoryRead)
+async def get_category(slug: str, session: AsyncSession = Depends(get_db)) -> Category:
     try:
-        category = await CategoryService(session).get_active_by_id(category_id)
+        category = await CategoryService(session).get_active_by_slug(slug)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return category

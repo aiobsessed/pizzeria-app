@@ -14,8 +14,15 @@ class ProductService:
     # -----------------------
     # Admin methods
     # -----------------------
-    async def get_all(self) -> list[Product]:
-        return await self.product_repo.get_all()
+    async def get_all(
+        self,
+        category_id: int | None = None,
+        is_available: bool | None = None,
+        name: str | None = None,
+    ) -> list[Product]:
+        return await self.product_repo.get_all(
+            category_id=category_id, is_available=is_available, name=name
+        )
 
     async def get_by_id(self, product_id: int) -> Product:
         product = await self.product_repo.get_by_id(product_id)

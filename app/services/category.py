@@ -13,8 +13,13 @@ class CategoryService:
     # -----------------------
     # Admin methods
     # -----------------------
-    async def get_all(self) -> list[Category]:
-        return await self.category_repo.get_all()
+    async def get_all(
+        self,
+        is_active: bool | None = None,
+        slug: str | None = None,
+        name: str | None = None,
+    ) -> list[Category]:
+        return await self.category_repo.get_all(is_active=is_active, slug=slug, name=name)
 
     async def get_by_id(self, category_id: int) -> Category:
         category = await self.category_repo.get_by_id(category_id)
@@ -78,6 +83,12 @@ class CategoryService:
 
     async def get_active_by_id(self, category_id: int) -> Category:
         category = await self.category_repo.get_active_by_id(category_id)
+        if category is None:
+            raise NotFoundError("Category not found")
+        return category
+
+    async def get_active_by_slug(self, slug: str) -> Category:
+        category = await self.category_repo.get_active_by_slug(slug)
         if category is None:
             raise NotFoundError("Category not found")
         return category
