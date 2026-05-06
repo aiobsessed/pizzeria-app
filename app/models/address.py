@@ -2,20 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, ForeignKey, false
+from sqlalchemy import ForeignKey, String, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.models.client import Client
 
 
 class Address(Base):
     __tablename__ = "addresses"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
     city: Mapped[str] = mapped_column(String(50))
     street: Mapped[str] = mapped_column(String(150))
     house: Mapped[str] = mapped_column(String(20))
@@ -23,4 +23,4 @@ class Address(Base):
     comment: Mapped[str | None] = mapped_column(String(255))
     is_deleted: Mapped[bool] = mapped_column(default=False, server_default=false())
 
-    user: Mapped[User] = relationship(back_populates="addresses")
+    client: Mapped[Client] = relationship(back_populates="addresses")

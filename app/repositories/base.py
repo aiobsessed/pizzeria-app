@@ -32,5 +32,4 @@ class BaseRepository(Generic[ModelType]):
     async def update(self, obj: ModelType) -> ModelType:
         self.session.add(obj)
         await self.session.flush()
-        await self.session.refresh(obj)
         return obj

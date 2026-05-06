@@ -13,49 +13,48 @@ class CartService:
         self.product_repo = ProductRepository(session)
 
     # -----------------------
-    # Admin methods
+    # Internal helper
     # -----------------------
-    async def get_by_user(self, user_id: int) -> Cart:
-        cart = await self.cart_repo.get_by_user(user_id)
+    async def get_by_client(self, client_id: int) -> Cart:
+        cart = await self.cart_repo.get_by_client(client_id)
         if cart is None:
-            new_cart = Cart(user_id=user_id)
-            cart = await self.cart_repo.create(new_cart)
+            new_cart = Cart(client_id=client_id)
+            await self.cart_repo.create(new_cart)
+            cart = await self.cart_repo.get_by_client(client_id)
         return cart
 
     # -----------------------
-    #  User methods
+    # Client methods
     # -----------------------
-    async def add_item(self, user_id: int, data: CartItemCreate) -> CartItem:
+    async def add_item(self, client_id: int, data: CartItemCreate) -> CartItem:
         product = await self.product_repo.get_by_id(data.product_id)
         if product is None:
             raise NotFoundError("Product not found")
         elif not product.is_available:
             raise BusinessError(f"Product {product.name} is not available")
 
-        cart = await self.get_by_user(user_id)
+        cart = await self.get_by_client(client_id)
         new_item = CartItem(cart_id=cart.id, **data.model_dump())
         return await self.cart_item_repo.create(new_item)
 
-    async def update_item(
-        self, user_id: int, item_id: int, data: CartItemUpdate
-    ) -> CartItem:
+    async def update_item(self, client_id: int, item_id: int, data: CartItemUpdate) -> CartItem:
         item = await self.cart_item_repo.get_by_id_with_cart(item_id)
-        if item is None or item.cart.user_id != user_id:
+        if item is None or item.cart.client_id != client_id:
             raise NotFoundError("Item not found")
 
         for field, value in data.model_dump().items():
             setattr(item, field, value)
         return await self.cart_item_repo.update(item)
 
-    async def remove_item(self, user_id: int, item_id: int) -> None:
+    async def remove_item(self, client_id: int, item_id: int) -> None:
         item = await self.cart_item_repo.get_by_id_with_cart(item_id)
-        if item is None or item.cart.user_id != user_id:
+        if item is None or item.cart.client_id != client_id:
             raise NotFoundError("Item not found")
 
         await self.cart_item_repo.delete(item)
 
-    async def clear(self, user_id: int) -> None:
-        cart = await self.cart_repo.get_by_user(user_id)
+    async def clear(self, client_id: int) -> None:
+        cart = await self.cart_repo.get_by_client(client_id)
         if cart is None or not cart.items:
             raise ConflictError("Cart is empty")
 

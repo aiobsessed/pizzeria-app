@@ -14,7 +14,7 @@ class AddressCreate(AddressBase):
 
 class AddressRead(AddressBase):
     id: int
-    user_id: int
+    client_id: int
     apartment: str | None
     comment: str | None
     is_deleted: bool

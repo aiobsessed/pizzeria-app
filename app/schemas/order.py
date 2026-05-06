@@ -36,7 +36,7 @@ class OrderCreate(OrderBase):
 
 class OrderRead(OrderBase):
     id: int
-    user_id: int
+    client_id: int
     items: list[OrderItemRead]
     address_id: int | None
     courier_id: int | None

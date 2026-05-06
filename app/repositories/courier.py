@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from .base import BaseRepository
-from app.models import Courier, User
+from app.models import Courier, Employee
+from app.core.enums import EmployeeRole
 
 
 class CourierRepository(BaseRepository[Courier]):
@@ -17,13 +18,13 @@ class CourierRepository(BaseRepository[Courier]):
         email: str | None = None,
         is_available: bool | None = None,
     ) -> list[Courier]:
-        query = select(Courier).join(Courier.user)
+        query = select(Courier).join(Courier.employee)
         if name is not None:
-            query = query.where(User.name.ilike(f"%{name}%"))
+            query = query.where(Employee.name.ilike(f"%{name}%"))
         if phone is not None:
-            query = query.where(User.phone.ilike(f"%{phone}%"))
+            query = query.where(Employee.phone.ilike(f"%{phone}%"))
         if email is not None:
-            query = query.where(User.email.ilike(f"%{email}%"))
+            query = query.where(Employee.email.ilike(f"%{email}%"))
         if is_available is not None:
             query = query.where(Courier.is_available == is_available)
         result = await self.session.execute(query)
@@ -31,10 +32,14 @@ class CourierRepository(BaseRepository[Courier]):
 
     async def get_by_id_with_orders(self, courier_id: int) -> Courier | None:
         result = await self.session.execute(
-            select(Courier).options(selectinload(Courier.orders)).where(Courier.id == courier_id)
+            select(Courier)
+            .options(selectinload(Courier.orders))
+            .where(Courier.id == courier_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_by_user(self, user_id: int) -> Courier | None:
-        result = await self.session.execute(select(Courier).where(Courier.user_id == user_id))
+    async def get_by_employee(self, employee_id: int) -> Courier | None:
+        result = await self.session.execute(
+            select(Courier).where(Courier.employee_id == employee_id)
+        )
         return result.scalar_one_or_none()

@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
@@ -28,7 +29,7 @@ class OrderService:
     # -----------------------
     async def get_all_with_items(
         self,
-        user_id: int | None = None,
+        client_id: int | None = None,
         courier_id: int | None = None,
         address_id: int | None = None,
         delivery_type: DeliveryType | None = None,
@@ -37,7 +38,7 @@ class OrderService:
         created_at: datetime | None = None,
     ) -> list[Order]:
         return await self.order_repo.get_all_with_items(
-            user_id=user_id,
+            client_id=client_id,
             courier_id=courier_id,
             address_id=address_id,
             delivery_type=delivery_type,
@@ -80,21 +81,24 @@ class OrderService:
         return await self.order_repo.update(order)
 
     # -----------------------
-    # User methods
+    # Client methods
     # -----------------------
-    async def get_own_order(self, user_id: int, order_id: int) -> Order:
+    async def get_by_client(self, client_id: int) -> list[Order]:
+        return await self.order_repo.get_by_client(client_id)
+
+    async def get_own_order(self, client_id: int, order_id: int) -> Order:
         order = await self.get_by_id_with_items(order_id)
-        if order.user_id != user_id:
+        if order.client_id != client_id:
             raise NotFoundError("Order not found")
         return order
 
-    async def create(self, user_id: int, data: OrderCreate) -> Order:
+    async def create(self, client_id: int, data: OrderCreate) -> Order:
         if data.delivery_type == DeliveryType.delivery:
             address = await self.address_repo.get_by_id(data.address_id)
-            if address is None or address.user_id != user_id or address.is_deleted:
+            if address is None or address.client_id != client_id or address.is_deleted:
                 raise NotFoundError("Address not found")
 
-        cart = await self.cart_repo.get_by_user(user_id)
+        cart = await self.cart_repo.get_by_client(client_id)
         if cart is None:
             raise BusinessError("Cart is empty")
 
@@ -116,27 +120,24 @@ class OrderService:
                     price_at_order=cart_item.product.price,
                 )
             )
-
-            item_total = cart_item.product.price * cart_item.quantity
-            total_price += item_total
+            total_price += cart_item.product.price * cart_item.quantity
 
         order = await self.order_repo.create(
-            Order(user_id=user_id, total_price=total_price, **data.model_dump())
+            Order(client_id=client_id, total_price=total_price, **data.model_dump())
         )
 
         for order_item in order_items:
             order_item.order_id = order.id
         await self.order_item_repo.bulk_create(order_items)
 
-        # Удаляем корзину и позиции корзины после успешного создания заказа
         await self.cart_item_repo.bulk_delete(cart_items)
         await self.cart_repo.delete(cart)
 
         return await self.order_repo.get_by_id_with_items(order.id)
 
-    async def own_cancel(self, user_id: int, order_id: int) -> Order:
+    async def own_cancel(self, client_id: int, order_id: int) -> Order:
         order = await self.get_by_id_with_items(order_id)
-        if order.user_id != user_id:
+        if order.client_id != client_id:
             raise NotFoundError("Order not found")
         elif order.status == OrderStatus.canceled:
             raise ConflictError("Order already canceled")

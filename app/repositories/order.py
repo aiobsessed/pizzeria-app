@@ -1,5 +1,6 @@
 from datetime import datetime
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,7 +15,7 @@ class OrderRepository(BaseRepository[Order]):
 
     async def get_all_with_items(
         self,
-        user_id: int | None = None,
+        client_id: int | None = None,
         courier_id: int | None = None,
         address_id: int | None = None,
         delivery_type: DeliveryType | None = None,
@@ -23,8 +24,8 @@ class OrderRepository(BaseRepository[Order]):
         created_at: datetime | None = None,
     ) -> list[Order]:
         query = select(Order).options(selectinload(Order.items)).order_by(Order.created_at.desc())
-        if user_id is not None:
-            query = query.where(Order.user_id == user_id)
+        if client_id is not None:
+            query = query.where(Order.client_id == client_id)
         if courier_id is not None:
             query = query.where(Order.courier_id == courier_id)
         if address_id is not None:
@@ -46,19 +47,17 @@ class OrderRepository(BaseRepository[Order]):
         )
         return result.scalar_one_or_none()
 
-    async def get_by_user(self, user_id: int) -> list[Order]:
+    async def get_by_client(self, client_id: int) -> list[Order]:
         result = await self.session.execute(
             select(Order)
             .options(selectinload(Order.items))
-            .where(Order.user_id == user_id)
+            .where(Order.client_id == client_id)
             .order_by(Order.created_at.desc())
         )
         return result.scalars().all()
 
     async def get_by_courier(self, courier_id: int) -> list[Order]:
         result = await self.session.execute(
-            select(Order)
-            .options(selectinload(Order.items))
-            .where(Order.courier_id == courier_id)
+            select(Order).options(selectinload(Order.items)).where(Order.courier_id == courier_id)
         )
         return result.scalars().all()

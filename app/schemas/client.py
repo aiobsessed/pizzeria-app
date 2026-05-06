@@ -1,31 +1,27 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, ConfigDict, Field
-
-from app.core.enums import Role
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class UserBase(BaseModel):
+class ClientBase(BaseModel):
     name: str = Field(max_length=50)
     email: EmailStr
     phone: str = Field(max_length=20)
+
+
+class ClientCreate(ClientBase):
     password: str = Field(min_length=8)
 
 
-class UserCreate(UserBase):
-    pass
-
-
-class UserRead(UserBase):
+class ClientRead(ClientBase):
     id: int
-    role: Role
     is_blocked: bool
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserUpdate(BaseModel):
+class ClientUpdate(BaseModel):
     name: str | None = Field(None, max_length=50)
     email: EmailStr | None = None
     phone: str | None = Field(None, max_length=20)

@@ -1,11 +1,12 @@
 from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, require_admin
 from app.core.enums import DeliveryType, OrderStatus, PaymentMethod
 from app.core.exceptions import ConflictError, NotFoundError
-from app.models import Order, User
+from app.models import Employee, Order
 from app.schemas import OrderRead, OrderUpdate
 from app.services import OrderService
 
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/admin/orders", tags=["orders"])
 
 @router.get("/", response_model=list[OrderRead])
 async def get_all_orders(
-    user_id: int | None = None,
+    client_id: int | None = None,
     courier_id: int | None = None,
     address_id: int | None = None,
     delivery_type: DeliveryType | None = None,
@@ -22,10 +23,10 @@ async def get_all_orders(
     status: OrderStatus | None = None,
     created_at: datetime | None = None,
     session: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: Employee = Depends(require_admin),
 ) -> list[Order]:
     return await OrderService(session).get_all_with_items(
-        user_id=user_id,
+        client_id=client_id,
         courier_id=courier_id,
         address_id=address_id,
         delivery_type=delivery_type,
@@ -37,13 +38,14 @@ async def get_all_orders(
 
 @router.get("/{order_id}", response_model=OrderRead)
 async def get_order(
-    order_id: int, session: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+    order_id: int,
+    session: AsyncSession = Depends(get_db),
+    _: Employee = Depends(require_admin),
 ) -> Order:
     try:
-        order = await OrderService(session).get_by_id_with_items(order_id)
+        return await OrderService(session).get_by_id_with_items(order_id)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return order
 
 
 @router.patch("/{order_id}", response_model=OrderRead)
@@ -51,23 +53,23 @@ async def update_order(
     order_id: int,
     data: OrderUpdate,
     session: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: Employee = Depends(require_admin),
 ) -> Order:
     try:
-        updated_order = await OrderService(session).update(order_id, data)
+        return await OrderService(session).update(order_id, data)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return updated_order
 
 
 @router.patch("/{order_id}/cancel", response_model=OrderRead)
 async def cancel_order(
-    order_id: int, session: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
+    order_id: int,
+    session: AsyncSession = Depends(get_db),
+    _: Employee = Depends(require_admin),
 ) -> Order:
     try:
-        canceled_order = await OrderService(session).cancel(order_id)
+        return await OrderService(session).cancel(order_id)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
-    return canceled_order

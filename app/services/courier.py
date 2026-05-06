@@ -2,13 +2,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import Courier
+from app.repositories import CourierRepository, EmployeeRepository
 from app.schemas import CourierCreate, CourierUpdate
-from app.repositories import CourierRepository
 
 
 class CourierService:
     def __init__(self, session: AsyncSession) -> None:
         self.courier_repo = CourierRepository(session)
+        self.employee_repo = EmployeeRepository(session)
 
     # -----------------------
     # Admin methods
@@ -37,9 +38,10 @@ class CourierService:
         return courier
 
     async def create(self, data: CourierCreate) -> Courier:
-        existing = await self.courier_repo.get_by_user(data.user_id)
-        if existing:
-            raise ConflictError("User is already courier")
+        if await self.employee_repo.get_by_id(data.employee_id) is None:
+            raise NotFoundError("Employee not found")
+        if await self.courier_repo.get_by_employee(data.employee_id) is not None:
+            raise ConflictError("Employee is already a courier")
         new_courier = Courier(**data.model_dump())
         return await self.courier_repo.create(new_courier)
 
@@ -48,7 +50,7 @@ class CourierService:
         await self.courier_repo.delete(courier)
 
     # -----------------------
-    # User methods
+    # Courier methods
     # -----------------------
     async def update(self, courier_id: int, data: CourierUpdate) -> Courier:
         courier = await self.get_by_id(courier_id)

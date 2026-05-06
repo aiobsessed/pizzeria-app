@@ -4,7 +4,7 @@ from .order import OrderRead
 
 
 class CourierBase(BaseModel):
-    user_id: int
+    employee_id: int
 
 
 class CourierCreate(CourierBase):

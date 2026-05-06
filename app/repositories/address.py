@@ -9,11 +9,11 @@ class AddressRepository(BaseRepository[Address]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(Address, session)
 
-    async def get_by_user(self, user_id: int) -> list[Address]:
+    async def get_by_client(self, client_id: int) -> list[Address]:
         result = await self.session.execute(
             select(Address).where(
-                Address.user_id == user_id,
-                ~Address.is_deleted
+                Address.client_id == client_id,
+                ~Address.is_deleted,
             )
         )
         return result.scalars().all()

@@ -10,8 +10,8 @@ class CartRepository(BaseRepository[Cart]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(Cart, session)
 
-    async def get_by_user(self, user_id: int) -> Cart | None:
+    async def get_by_client(self, client_id: int) -> Cart | None:
         result = await self.session.execute(
-            select(Cart).options(selectinload(Cart.items)).where(Cart.user_id == user_id)
+            select(Cart).options(selectinload(Cart.items)).where(Cart.client_id == client_id)
         )
         return result.scalar_one_or_none()

@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .exceptions import AuthError
 from .security import verify_token
-from .enums import Role
+from .enums import EmployeeRole
 from app.database.database import db
-from app.models import User, Courier
-from app.repositories import UserRepository, CourierRepository
+from app.models import Client, Employee, Courier
+from app.repositories import ClientRepository, EmployeeRepository, CourierRepository
 
 security = HTTPBearer()
 
@@ -19,37 +19,70 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def get_current_user(
+# ── Поток: клиент ─────────────────────────────────────────────────────────────
+
+
+async def get_current_client(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     session: AsyncSession = Depends(get_db),
-) -> User:
+) -> Client:
+    """Извлекает клиента из токена с sub_type='client'."""
     token = credentials.credentials
     try:
         payload = verify_token(token)
     except AuthError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = await UserRepository(session).get_by_id(int(payload.get("sub")))
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    if user.is_blocked:
-        raise HTTPException(status_code=403, detail='User is blocked')
-    return user
+    if payload.get("sub_type") != "client":
+        raise HTTPException(status_code=401, detail="Invalid token type")
+
+    client = await ClientRepository(session).get_by_id(int(payload["sub"]))
+    if client is None:
+        raise HTTPException(status_code=401, detail="Client not found")
+    if client.is_blocked:
+        raise HTTPException(status_code=403, detail="Client is blocked")
+    return client
 
 
-async def require_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != Role.admin:
+# ── Поток: сотрудник ──────────────────────────────────────────────────────────
+
+
+async def get_current_employee(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    session: AsyncSession = Depends(get_db),
+) -> Employee:
+    """Извлекает сотрудника из токена с sub_type='employee'."""
+    token = credentials.credentials
+    try:
+        payload = verify_token(token)
+    except AuthError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    if payload.get("sub_type") != "employee":
+        raise HTTPException(status_code=401, detail="Invalid token type")
+
+    employee = await EmployeeRepository(session).get_by_id(int(payload["sub"]))
+    if employee is None:
+        raise HTTPException(status_code=401, detail="Employee not found")
+    return employee
+
+
+async def require_admin(
+    employee: Employee = Depends(get_current_employee),
+) -> Employee:
+    if employee.role != EmployeeRole.admin:
         raise HTTPException(status_code=403, detail="Access forbidden")
-    return user
+    return employee
 
 
 async def require_courier(
-    user: User = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+    employee: Employee = Depends(get_current_employee),
+    session: AsyncSession = Depends(get_db),
 ) -> Courier:
-    if user.role != Role.courier:
+    if employee.role != EmployeeRole.courier:
         raise HTTPException(status_code=403, detail="Access forbidden")
 
-    courier = await CourierRepository(session).get_by_user(user.id)
+    courier = await CourierRepository(session).get_by_employee(employee.id)
     if courier is None:
-        raise HTTPException(status_code=403, detail="Access forbidden")
+        raise HTTPException(status_code=403, detail="Courier profile not found")
     return courier

@@ -23,7 +23,7 @@ class CartItemUpdate(BaseModel):
 
 class CartRead(BaseModel):
     id: int
-    user_id: int
+    client_id: int
     items: list[CartItemRead]
 
     model_config = ConfigDict(from_attributes=True)

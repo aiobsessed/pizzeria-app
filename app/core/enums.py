@@ -1,12 +1,19 @@
 from enum import Enum
 
 
-class Role(str, Enum):
-    user = "user"
+# ─── Роли и статусы сотрудников ──────────────────────────────────────────────
+class EmployeeRole(str, Enum):
     admin = "admin"
     courier = "courier"
 
 
+class EmployeeStatus(str, Enum):
+    active = "active"
+    fired = "fired"
+    on_leave = "on_leave"
+
+
+# ─── Заказы ──────────────────────────────────────────────────────────────────
 class DeliveryType(str, Enum):
     delivery = "delivery"
     pickup = "pickup"
