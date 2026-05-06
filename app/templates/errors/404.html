@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}404 — Страница не найдена{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center px-4">
+    <div class="text-center">
+        <p class="text-7xl font-black text-orange-500 mb-4">404</p>
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Страница не найдена</h1>
+        <p class="text-gray-500 mb-8">Кажется, эта страница куда-то улетела вместе с пиццей.</p>
+        <a href="/"
+           class="inline-block px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white
+                  text-sm font-semibold rounded-xl transition-colors">
+            На главную
+        </a>
+    </div>
+</div>
+{% endblock %}
