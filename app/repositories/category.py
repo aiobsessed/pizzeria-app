@@ -26,12 +26,6 @@ class CategoryRepository(BaseRepository[Category]):
         result = await self.session.execute(select(Category).where(Category.is_active))
         return result.scalars().all()
 
-    async def get_active_by_id(self, category_id: int) -> Category | None:
-        result = await self.session.execute(
-            select(Category).where(Category.id == category_id, Category.is_active)
-        )
-        return result.scalar_one_or_none()
-
     async def get_active_by_slug(self, slug: str) -> Category | None:
         result = await self.session.execute(
             select(Category).where(Category.slug == slug, Category.is_active)

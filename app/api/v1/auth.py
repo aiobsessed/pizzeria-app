@@ -13,7 +13,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=ClientRead, status_code=201)
 async def register(data: ClientCreate, session: AsyncSession = Depends(get_db)) -> Client:
-    """Регистрация нового клиента."""
     try:
         new_client = await ClientService(session).create(data)
     except ConflictError as e:
@@ -23,7 +22,6 @@ async def register(data: ClientCreate, session: AsyncSession = Depends(get_db)) 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(data: LoginRequest, session: AsyncSession = Depends(get_db)) -> TokenResponse:
-    """Вход клиента. Возвращает токен с sub_type='client'."""
     try:
         client = await ClientService(session).authenticate(**data.model_dump())
     except AuthError as e:
@@ -36,7 +34,6 @@ async def login(data: LoginRequest, session: AsyncSession = Depends(get_db)) -> 
 async def staff_login(
     data: LoginRequest, session: AsyncSession = Depends(get_db)
 ) -> TokenResponse:
-    """Вход сотрудника (admin / courier). Возвращает токен с sub_type='employee'."""
     try:
         employee = await EmployeeService(session).authenticate(**data.model_dump())
     except AuthError as e:

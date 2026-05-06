@@ -1,6 +1,5 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from .base import BaseRepository
 from app.models import Employee
@@ -33,28 +32,14 @@ class EmployeeRepository(BaseRepository[Employee]):
         result = await self.session.execute(query)
         return result.scalars().all()
 
-    async def get_by_id_with_position(self, employee_id: int) -> Employee | None:
-        result = await self.session.execute(
-            select(Employee)
-            .options(selectinload(Employee.position))
-            .where(Employee.id == employee_id)
-        )
-        return result.scalar_one_or_none()
-
     async def get_by_email(self, email: str) -> Employee | None:
-        result = await self.session.execute(
-            select(Employee).where(Employee.email == email)
-        )
+        result = await self.session.execute(select(Employee).where(Employee.email == email))
         return result.scalar_one_or_none()
 
     async def get_by_phone(self, phone: str) -> Employee | None:
-        result = await self.session.execute(
-            select(Employee).where(Employee.phone == phone)
-        )
+        result = await self.session.execute(select(Employee).where(Employee.phone == phone))
         return result.scalar_one_or_none()
 
     async def get_by_inn(self, inn: str) -> Employee | None:
-        result = await self.session.execute(
-            select(Employee).where(Employee.inn == inn)
-        )
+        result = await self.session.execute(select(Employee).where(Employee.inn == inn))
         return result.scalar_one_or_none()

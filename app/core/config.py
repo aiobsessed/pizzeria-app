@@ -15,9 +15,7 @@ class Settings(BaseSettings):
     # Database configuration
     # -----------------------
     DB_HOST: str = Field(min_length=1, description="Хост базы данных")
-    DB_PORT: int = Field(
-        ge=1, le=65535, description="Порт PostgreSQL"
-    )  # порт - это 16 битное число (2^16)
+    DB_PORT: int = Field(ge=1, le=65535, description="Порт PostgreSQL")
     DB_USER: str = Field(min_length=1, description="Имя пользователя БД")
     DB_PASS: SecretStr = Field(description="Пароль БД")
     DB_NAME: str = Field(min_length=1, description="Название базы данных")
@@ -38,7 +36,7 @@ class Settings(BaseSettings):
     # -----------------------
     model_config = SettingsConfigDict(
         env_file=".env",
-        extra="forbid",  # запрещаем лишние переменные из env
+        extra="forbid",
     )
 
     # -----------------------
@@ -70,10 +68,7 @@ class Settings(BaseSettings):
         user = quote_plus(self.DB_USER)
         password = quote_plus(self.DB_PASS.get_secret_value())
 
-        return (
-            f"postgresql+asyncpg://{user}:{password}"
-            f"@{self.DB_HOST}:{self.DB_PORT}/{db_name}"
-        )
+        return f"postgresql+asyncpg://{user}:{password}@{self.DB_HOST}:{self.DB_PORT}/{db_name}"
 
     # -----------------------
     # Properties

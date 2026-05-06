@@ -30,12 +30,6 @@ class ProductService:
             raise NotFoundError("Product not found")
         return product
 
-    async def get_by_name(self, product_name: str) -> Product:
-        product = await self.product_repo.get_by_name(product_name)
-        if product is None:
-            raise NotFoundError("Product not found")
-        return product
-
     async def create(self, data: ProductCreate) -> Product:
         name = await self.product_repo.get_by_name(data.name)
         if name is not None:

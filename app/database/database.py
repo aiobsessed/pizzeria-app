@@ -25,7 +25,6 @@ class Database:
         )
 
     async def create_database_if_not_exist(self) -> None:
-        """Создает базу данных если она не существует."""
         root_engine = create_async_engine(
             url=settings.DATABASE_URL_ROOT, isolation_level="AUTOCOMMIT"
         )
@@ -40,7 +39,6 @@ class Database:
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator[AsyncSession, None]:
-        """Контекстный менеджер для работы с сессией"""
         async with self._session_factory() as session:
             try:
                 yield session
@@ -50,7 +48,6 @@ class Database:
                 raise
 
     async def dispose(self) -> None:
-        """Закрывает все соединения с базой."""
         await self._engine.dispose()
 
 

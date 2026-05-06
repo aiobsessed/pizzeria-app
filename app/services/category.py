@@ -24,18 +24,6 @@ class CategoryService:
             raise NotFoundError("Category not found")
         return category
 
-    async def get_by_name(self, name: str) -> Category:
-        category = await self.category_repo.get_by_name(name)
-        if category is None:
-            raise NotFoundError("Category not found")
-        return category
-
-    async def get_by_slug(self, slug: str) -> Category:
-        category = await self.category_repo.get_by_slug(slug)
-        if category is None:
-            raise NotFoundError("Category not found")
-        return category
-
     async def create(self, data: CategoryCreate) -> Category:
         name = await self.category_repo.get_by_name(data.name)
         if name is not None:
@@ -77,12 +65,6 @@ class CategoryService:
     # -----------------------
     async def get_all_active(self) -> list[Category]:
         return await self.category_repo.get_all_active()
-
-    async def get_active_by_id(self, category_id: int) -> Category:
-        category = await self.category_repo.get_active_by_id(category_id)
-        if category is None:
-            raise NotFoundError("Category not found")
-        return category
 
     async def get_active_by_slug(self, slug: str) -> Category:
         category = await self.category_repo.get_active_by_slug(slug)
