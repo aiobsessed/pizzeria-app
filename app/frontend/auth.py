@@ -15,9 +15,15 @@ router = APIRouter(tags=["frontend-auth"])
 templates = Jinja2Templates(directory="app/templates")
 
 
-def _flash_redirect(url: str, message: str) -> RedirectResponse:
+def _flash_redirect(url: str, message: str, success: bool = False) -> RedirectResponse:
+    """
+    Редирект с flash-сообщением.
+    success=True  → «ok:сообщение» → base.html рендерит зелёным
+    success=False → «сообщение»    → base.html рендерит красным (ошибка)
+    """
+    value = f"ok:{message}" if success else message
     response = RedirectResponse(url=url, status_code=302)
-    response.set_cookie("flash", message, max_age=10, httponly=True, samesite="lax")
+    response.set_cookie("flash", value, max_age=10, httponly=True, samesite="lax")
     return response
 
 
@@ -126,7 +132,8 @@ async def register_submit(
     except ConflictError as e:
         return _flash_redirect("/register", str(e))
 
-    return _flash_redirect("/login", "Регистрация прошла успешно. Войдите в аккаунт.")
+    # БАГ ИСПРАВЛЕН: success=True — сообщение об успехе теперь зелёное
+    return _flash_redirect("/login", "Регистрация прошла успешно. Войдите в аккаунт.", success=True)
 
 
 @router.post("/logout")

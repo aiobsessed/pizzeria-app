@@ -29,7 +29,24 @@
     </nav>
     {% endblock %}
 
+    {#
+      БАГ ИСПРАВЛЕН: flash-сообщения теперь имеют два варианта стиля:
+        - «ok:сообщение» → зелёный (успех)
+        - «сообщение»    → красный (ошибка)
+      Бэкенд ставит префикс «ok:» через _flash_redirect(…, success=True).
+    #}
     {% if flash %}
+    {% set is_success = flash.startswith("ok:") %}
+    {% set flash_text = flash[3:] if is_success else flash %}
+    {% if is_success %}
+    {% set flash_bg    = "bg-green-50 border-green-300" %}
+    {% set flash_text_color = "text-green-700" %}
+    {% set flash_btn   = "text-green-400 hover:text-green-600" %}
+    {% else %}
+    {% set flash_bg    = "bg-red-50 border-red-300" %}
+    {% set flash_text_color = "text-red-700" %}
+    {% set flash_btn   = "text-red-400 hover:text-red-600" %}
+    {% endif %}
     <div x-data="{ visible: true }"
          x-show="visible"
          x-init="setTimeout(() => visible = false, 4000)"
@@ -37,10 +54,10 @@
          x-transition:leave-start="opacity-100 translate-y-0"
          x-transition:leave-end="opacity-0 -translate-y-2"
          class="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-sm w-full px-5 py-3
-                bg-red-50 border border-red-300 text-red-700 text-sm rounded-xl shadow-lg
+                border {{ flash_bg }} {{ flash_text_color }} text-sm rounded-xl shadow-lg
                 flex items-center justify-between gap-4">
-        <span>{{ flash }}</span>
-        <button @click="visible = false" class="text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
+        <span>{{ flash_text }}</span>
+        <button @click="visible = false" class="{{ flash_btn }} flex-shrink-0">✕</button>
     </div>
     {% endif %}
 
