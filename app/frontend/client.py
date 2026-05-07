@@ -185,7 +185,6 @@ async def update_cart_item(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    # update_item flushes internally, so the next query sees fresh data
     items, total, _ = await _load_cart_summary(client.id, session)
     updated_item = next((i for i in items if i.id == item_id), None)
 
@@ -193,6 +192,7 @@ async def update_cart_item(
         "request": request,
         "item": updated_item,
         "total": total,
+        "htmx_request": True,  # разрешает рендер OOB-блока итого
     })
 
 
@@ -285,7 +285,7 @@ async def cancel_order(
     try:
         order = await OrderService(session).own_cancel(client.id, order_id)
     except (ConflictError, BusinessError):
-        # Заказ уже отменён или не в статусе "принят" — показываем текущий статус
+        # Заказ уже отменён или не в статусе «принят» — показываем текущий статус
         try:
             order = await OrderService(session).get_own_order(client.id, order_id)
         except NotFoundError:

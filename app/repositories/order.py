@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.enums import DeliveryType, OrderStatus, PaymentMethod
 from .base import BaseRepository
-from app.models import Order
+from app.models import Order, OrderItem
 
 
 class OrderRepository(BaseRepository[Order]):
@@ -23,7 +23,11 @@ class OrderRepository(BaseRepository[Order]):
         status: OrderStatus | None = None,
         created_at: datetime | None = None,
     ) -> list[Order]:
-        query = select(Order).options(selectinload(Order.items)).order_by(Order.created_at.desc())
+        query = (
+            select(Order)
+            .options(selectinload(Order.items).selectinload(OrderItem.product))
+            .order_by(Order.created_at.desc())
+        )
         if client_id is not None:
             query = query.where(Order.client_id == client_id)
         if courier_id is not None:
@@ -43,14 +47,16 @@ class OrderRepository(BaseRepository[Order]):
 
     async def get_by_id_with_items(self, order_id: int) -> Order | None:
         result = await self.session.execute(
-            select(Order).options(selectinload(Order.items)).where(Order.id == order_id)
+            select(Order)
+            .options(selectinload(Order.items).selectinload(OrderItem.product))
+            .where(Order.id == order_id)
         )
         return result.scalar_one_or_none()
 
     async def get_by_client(self, client_id: int) -> list[Order]:
         result = await self.session.execute(
             select(Order)
-            .options(selectinload(Order.items))
+            .options(selectinload(Order.items).selectinload(OrderItem.product))
             .where(Order.client_id == client_id)
             .order_by(Order.created_at.desc())
         )
@@ -58,6 +64,8 @@ class OrderRepository(BaseRepository[Order]):
 
     async def get_by_courier(self, courier_id: int) -> list[Order]:
         result = await self.session.execute(
-            select(Order).options(selectinload(Order.items)).where(Order.courier_id == courier_id)
+            select(Order)
+            .options(selectinload(Order.items).selectinload(OrderItem.product))
+            .where(Order.courier_id == courier_id)
         )
         return result.scalars().all()

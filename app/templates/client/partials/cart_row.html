@@ -51,9 +51,11 @@
         </button>
     </td>
 </tr>
-{# OOB-обновление итого после изменения количества #}
+{# OOB-обновление итого — рендерится ТОЛЬКО в HTMX-ответе, не при SSR #}
+{% if htmx_request is defined and htmx_request %}
 <div id="cart-total" hx-swap-oob="true"
      class="flex items-center justify-between pt-4 border-t border-gray-100">
     <span class="text-sm text-gray-500">Итого</span>
     <span class="text-xl font-bold text-gray-900 tabular-nums">{{ total | round(2) }} ₽</span>
 </div>
+{% endif %}
