@@ -64,17 +64,20 @@ async def dashboard(
     products = await ProductService(session).get_all()
     couriers = await CourierService(session).get_all()
 
-    response = templates.TemplateResponse("admin/dashboard.html", {
-        "request": request,
-        "employee": employee,
-        "flash": flash,
-        "orders_count": len(orders),
-        "clients_count": len(clients),
-        "products_count": len(products),
-        "couriers_count": len(couriers),
-        "orders_by_status": {s: sum(1 for o in orders if o.status == s) for s in OrderStatus},
-        "OrderStatus": OrderStatus,
-    })
+    response = templates.TemplateResponse(
+        "admin/dashboard.html",
+        {
+            "request": request,
+            "employee": employee,
+            "flash": flash,
+            "orders_count": len(orders),
+            "clients_count": len(clients),
+            "products_count": len(products),
+            "couriers_count": len(couriers),
+            "orders_by_status": {s: sum(1 for o in orders if o.status == s) for s in OrderStatus},
+            "OrderStatus": OrderStatus,
+        },
+    )
     response.delete_cookie("flash")
     return response
 
@@ -85,7 +88,7 @@ async def dashboard(
 @router.get("/orders", response_class=HTMLResponse)
 async def orders_page(
     request: Request,
-    status: OrderStatus | None = None,
+    status: str | None = None,
     employee: Employee | None = Depends(get_current_employee_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
@@ -93,20 +96,30 @@ async def orders_page(
     if not _is_admin(employee):
         return RedirectResponse(url="/staff/login", status_code=302)
 
-    orders = await OrderService(session).get_all_with_items(status=status)
+    status_enum: OrderStatus | None = None
+    if status:
+        try:
+            status_enum = OrderStatus(status)
+        except ValueError:
+            pass
+
+    orders = await OrderService(session).get_all_with_items(status=status_enum)
     couriers = await CourierService(session).get_all()
 
-    response = templates.TemplateResponse("admin/orders.html", {
-        "request": request,
-        "employee": employee,
-        "flash": flash,
-        "orders": orders,
-        "couriers": couriers,
-        "OrderStatus": OrderStatus,
-        "DeliveryType": DeliveryType,
-        "PaymentMethod": PaymentMethod,
-        "current_status": status,
-    })
+    response = templates.TemplateResponse(
+        "admin/orders.html",
+        {
+            "request": request,
+            "employee": employee,
+            "flash": flash,
+            "orders": orders,
+            "couriers": couriers,
+            "OrderStatus": OrderStatus,
+            "DeliveryType": DeliveryType,
+            "PaymentMethod": PaymentMethod,
+            "current_status": status_enum,
+        },
+    )
     response.delete_cookie("flash")
     return response
 
@@ -128,12 +141,15 @@ async def update_order_status(
         return HTMLResponse("", status_code=404)
 
     couriers = await CourierService(session).get_all()
-    return templates.TemplateResponse("admin/partials/order_row.html", {
-        "request": request,
-        "order": order,
-        "couriers": couriers,
-        "OrderStatus": OrderStatus,
-    })
+    return templates.TemplateResponse(
+        "admin/partials/order_row.html",
+        {
+            "request": request,
+            "order": order,
+            "couriers": couriers,
+            "OrderStatus": OrderStatus,
+        },
+    )
 
 
 @router.patch("/orders/{order_id}/courier", response_class=HTMLResponse)
@@ -156,12 +172,15 @@ async def assign_courier(
         return HTMLResponse("", status_code=404)
 
     couriers = await CourierService(session).get_all()
-    return templates.TemplateResponse("admin/partials/order_row.html", {
-        "request": request,
-        "order": order,
-        "couriers": couriers,
-        "OrderStatus": OrderStatus,
-    })
+    return templates.TemplateResponse(
+        "admin/partials/order_row.html",
+        {
+            "request": request,
+            "order": order,
+            "couriers": couriers,
+            "OrderStatus": OrderStatus,
+        },
+    )
 
 
 # ── Clients ───────────────────────────────────────────────────────────────────
@@ -179,12 +198,15 @@ async def clients_page(
 
     clients = await ClientService(session).get_all()
 
-    response = templates.TemplateResponse("admin/clients.html", {
-        "request": request,
-        "employee": employee,
-        "flash": flash,
-        "clients": clients,
-    })
+    response = templates.TemplateResponse(
+        "admin/clients.html",
+        {
+            "request": request,
+            "employee": employee,
+            "flash": flash,
+            "clients": clients,
+        },
+    )
     response.delete_cookie("flash")
     return response
 
@@ -204,10 +226,13 @@ async def block_client(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    return templates.TemplateResponse("admin/partials/client_row.html", {
-        "request": request,
-        "client": client,
-    })
+    return templates.TemplateResponse(
+        "admin/partials/client_row.html",
+        {
+            "request": request,
+            "client": client,
+        },
+    )
 
 
 # ── Products ──────────────────────────────────────────────────────────────────
@@ -226,13 +251,16 @@ async def products_page(
     products = await ProductService(session).get_all()
     categories = await CategoryService(session).get_all()
 
-    response = templates.TemplateResponse("admin/products.html", {
-        "request": request,
-        "employee": employee,
-        "flash": flash,
-        "products": products,
-        "categories": categories,
-    })
+    response = templates.TemplateResponse(
+        "admin/products.html",
+        {
+            "request": request,
+            "employee": employee,
+            "flash": flash,
+            "products": products,
+            "categories": categories,
+        },
+    )
     response.delete_cookie("flash")
     return response
 
@@ -254,16 +282,18 @@ async def create_product(
         return RedirectResponse(url="/staff/login", status_code=302)
 
     try:
-        await ProductService(session).create(ProductCreate(
-            name=name,
-            category_id=category_id,
-            weight=weight,
-            price=Decimal(price),
-            description=description.strip() or None,
-            composition=composition.strip() or None,
-            image_url=image_url.strip() or None,
-            is_available=is_available == "on",
-        ))
+        await ProductService(session).create(
+            ProductCreate(
+                name=name,
+                category_id=category_id,
+                weight=weight,
+                price=Decimal(price),
+                description=description.strip() or None,
+                composition=composition.strip() or None,
+                image_url=image_url.strip() or None,
+                is_available=is_available == "on",
+            )
+        )
     except (NotFoundError, ConflictError) as e:
         return _flash_redirect("/admin/products", str(e))
 
@@ -288,16 +318,19 @@ async def update_product(
         return RedirectResponse(url="/staff/login", status_code=302)
 
     try:
-        await ProductService(session).update(product_id, ProductUpdate(
-            name=name,
-            category_id=category_id,
-            weight=weight,
-            price=Decimal(price),
-            description=description.strip() or None,
-            composition=composition.strip() or None,
-            image_url=image_url.strip() or None,
-            is_available=is_available == "on",
-        ))
+        await ProductService(session).update(
+            product_id,
+            ProductUpdate(
+                name=name,
+                category_id=category_id,
+                weight=weight,
+                price=Decimal(price),
+                description=description.strip() or None,
+                composition=composition.strip() or None,
+                image_url=image_url.strip() or None,
+                is_available=is_available == "on",
+            ),
+        )
     except (NotFoundError, ConflictError) as e:
         return _flash_redirect("/admin/products", str(e))
 
@@ -336,12 +369,15 @@ async def categories_page(
 
     categories = await CategoryService(session).get_all()
 
-    response = templates.TemplateResponse("admin/categories.html", {
-        "request": request,
-        "employee": employee,
-        "flash": flash,
-        "categories": categories,
-    })
+    response = templates.TemplateResponse(
+        "admin/categories.html",
+        {
+            "request": request,
+            "employee": employee,
+            "flash": flash,
+            "categories": categories,
+        },
+    )
     response.delete_cookie("flash")
     return response
 
@@ -423,15 +459,18 @@ async def employees_page(
     employees = await EmployeeService(session).get_all()
     positions = await PositionService(session).get_all()
 
-    response = templates.TemplateResponse("admin/employees.html", {
-        "request": request,
-        "employee": employee,
-        "flash": flash,
-        "employees": employees,
-        "positions": positions,
-        "EmployeeRole": EmployeeRole,
-        "EmployeeStatus": EmployeeStatus,
-    })
+    response = templates.TemplateResponse(
+        "admin/employees.html",
+        {
+            "request": request,
+            "employee": employee,
+            "flash": flash,
+            "employees": employees,
+            "positions": positions,
+            "EmployeeRole": EmployeeRole,
+            "EmployeeStatus": EmployeeStatus,
+        },
+    )
     response.delete_cookie("flash")
     return response
 
@@ -452,15 +491,17 @@ async def create_employee(
         return RedirectResponse(url="/staff/login", status_code=302)
 
     try:
-        await EmployeeService(session).create(EmployeeCreate(
-            position_id=position_id,
-            name=name,
-            email=email,
-            phone=phone,
-            inn=inn,
-            role=EmployeeRole(role),
-            password=password,
-        ))
+        await EmployeeService(session).create(
+            EmployeeCreate(
+                position_id=position_id,
+                name=name,
+                email=email,
+                phone=phone,
+                inn=inn,
+                role=EmployeeRole(role),
+                password=password,
+            )
+        )
     except (NotFoundError, ConflictError) as e:
         return _flash_redirect("/admin/employees", str(e))
 
@@ -483,14 +524,17 @@ async def update_employee(
         return RedirectResponse(url="/staff/login", status_code=302)
 
     try:
-        await EmployeeService(session).update(employee_id, EmployeeUpdate(
-            position_id=position_id,
-            name=name,
-            email=email,
-            phone=phone,
-            inn=inn,
-            role=EmployeeRole(role),
-        ))
+        await EmployeeService(session).update(
+            employee_id,
+            EmployeeUpdate(
+                position_id=position_id,
+                name=name,
+                email=email,
+                phone=phone,
+                inn=inn,
+                role=EmployeeRole(role),
+            ),
+        )
     except (NotFoundError, ConflictError) as e:
         return _flash_redirect("/admin/employees", str(e))
 
@@ -550,13 +594,16 @@ async def couriers_page(
     courier_employee_ids = {c.employee_id for c in couriers}
     available_employees = [e for e in all_employees if e.id not in courier_employee_ids]
 
-    response = templates.TemplateResponse("admin/couriers.html", {
-        "request": request,
-        "employee": employee,
-        "flash": flash,
-        "couriers": couriers,
-        "available_employees": available_employees,
-    })
+    response = templates.TemplateResponse(
+        "admin/couriers.html",
+        {
+            "request": request,
+            "employee": employee,
+            "flash": flash,
+            "couriers": couriers,
+            "available_employees": available_employees,
+        },
+    )
     response.delete_cookie("flash")
     return response
 
@@ -610,12 +657,15 @@ async def positions_page(
 
     positions = await PositionService(session).get_all()
 
-    response = templates.TemplateResponse("admin/positions.html", {
-        "request": request,
-        "employee": employee,
-        "flash": flash,
-        "positions": positions,
-    })
+    response = templates.TemplateResponse(
+        "admin/positions.html",
+        {
+            "request": request,
+            "employee": employee,
+            "flash": flash,
+            "positions": positions,
+        },
+    )
     response.delete_cookie("flash")
     return response
 

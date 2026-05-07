@@ -58,7 +58,7 @@ class OrderService:
 
     async def update(self, order_id: int, data: OrderUpdate) -> Order:
         order = await self.get_by_id_with_items(order_id)
-        for field, value in data.model_dump(exclude_none=True).items():
+        for field, value in data.model_dump(exclude_unset=True).items():
             setattr(order, field, value)
         return await self.order_repo.update(order)
 
