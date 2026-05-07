@@ -1,0 +1,59 @@
+<tr id="cart-item-{{ item.id }}"
+    class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+    <td class="py-4 pl-4 pr-2">
+        <div class="flex items-center gap-3">
+            <div class="w-14 h-14 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+                {% if item.product.image_url %}
+                <img src="{{ item.product.image_url }}"
+                     alt="{{ item.product.name }}"
+                     class="w-full h-full object-cover">
+                {% else %}
+                <img src="/static/img/placeholder.webp"
+                     alt="{{ item.product.name }}"
+                     class="w-full h-full object-cover">
+                {% endif %}
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-900">{{ item.product.name }}</p>
+                <p class="text-xs text-gray-400">{{ item.product.weight }} г · {{ item.product.price }} ₽/шт</p>
+            </div>
+        </div>
+    </td>
+    <td class="py-4 px-2">
+        <input type="number"
+               name="quantity"
+               value="{{ item.quantity }}"
+               min="1"
+               max="99"
+               hx-patch="/cart/items/{{ item.id }}"
+               hx-trigger="change delay:400ms"
+               hx-target="#cart-item-{{ item.id }}"
+               hx-swap="outerHTML"
+               hx-include="this"
+               class="w-16 px-2 py-1.5 text-sm text-center border border-gray-200 rounded-lg
+                      focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent">
+    </td>
+    <td class="py-4 px-2 text-right text-sm font-semibold text-gray-900 tabular-nums whitespace-nowrap">
+        {{ (item.quantity * item.product.price) | round(2) }} ₽
+    </td>
+    <td class="py-4 pl-2 pr-4">
+        <button
+            hx-delete="/cart/items/{{ item.id }}"
+            hx-target="#cart-item-{{ item.id }}"
+            hx-swap="outerHTML swap:0.3s"
+            class="p-1.5 text-gray-300 hover:text-red-400 transition-colors rounded-lg
+                   hover:bg-red-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+        </button>
+    </td>
+</tr>
+{# OOB-обновление итого после изменения количества #}
+<div id="cart-total" hx-swap-oob="true"
+     class="flex items-center justify-between pt-4 border-t border-gray-100">
+    <span class="text-sm text-gray-500">Итого</span>
+    <span class="text-xl font-bold text-gray-900 tabular-nums">{{ total | round(2) }} ₽</span>
+</div>

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Мои заказы — Пиццерия{% endblock %}
+
+{% block nav_links %}
+<a href="/"
+   class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
+    Главная
+</a>
+<a href="/menu"
+   class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
+    Меню
+</a>
+<a href="/cart"
+   class="flex items-center gap-1.5 text-sm font-medium text-gray-600
+          hover:text-orange-500 transition-colors">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+    </svg>
+    {% include "client/partials/navbar_counter.html" %}
+</a>
+<a href="/orders"
+   class="text-sm font-medium text-orange-500">
+    Заказы
+</a>
+<a href="/profile"
+   class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
+    {{ client.name.split()[0] }}
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Мои заказы</h1>
+
+    {% if not orders %}
+    <div class="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <p class="text-5xl mb-4">📋</p>
+        <p class="text-gray-500 mb-6">Вы ещё не делали заказов</p>
+        <a href="/menu"
+           class="inline-block px-6 py-2.5 bg-orange-500 hover:bg-orange-600
+                  text-white text-sm font-semibold rounded-xl transition-colors">
+            Перейти в меню
+        </a>
+    </div>
+    {% else %}
+    <div class="space-y-4">
+        {% for order in orders %}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+            {# Order header #}
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+                <div>
+                    <p class="text-sm font-semibold text-gray-900">Заказ #{{ order.id }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        {{ order.created_at.strftime("%d.%m.%Y в %H:%M") }}
+                    </p>
+                </div>
+                {% include "client/partials/order_status.html" %}
+            </div>
+
+            {# Order items #}
+            <div class="px-5 py-3 space-y-2">
+                {% for item in order.items %}
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-700">
+                        {{ item.quantity }} × {{ item.product.name if item.product else "Товар удалён" }}
+                    </span>
+                    <span class="text-gray-500 tabular-nums">
+                        {{ (item.quantity * item.price_at_order) | round(2) }} ₽
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+
+            {# Order footer #}
+            <div class="flex items-center justify-between px-5 py-3 bg-gray-50 border-t border-gray-100">
+                <span class="text-xs text-gray-400">
+                    {% if order.delivery_type.value == "delivery" %}🚗 Доставка{% else %}🏪 Самовывоз{% endif %}
+                    · {{ {"cash": "Наличными", "card": "Картой", "online": "Онлайн"}[order.payment_method.value] }}
+                </span>
+                <span class="text-sm font-bold text-gray-900 tabular-nums">
+                    {{ order.total_price }} ₽
+                </span>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

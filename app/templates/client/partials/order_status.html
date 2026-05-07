@@ -1,0 +1,26 @@
+{% set STATUS_META = {
+    "accepted":   {"label": "Принят",    "css": "bg-blue-50 text-blue-700 border-blue-200"},
+    "preparing":  {"label": "Готовится", "css": "bg-amber-50 text-amber-700 border-amber-200"},
+    "on_the_way": {"label": "В пути",    "css": "bg-orange-50 text-orange-700 border-orange-200"},
+    "delivered":  {"label": "Доставлен", "css": "bg-green-50 text-green-700 border-green-200"},
+    "canceled":   {"label": "Отменён",   "css": "bg-gray-50 text-gray-500 border-gray-200"}
+} %}
+{% set meta = STATUS_META[order.status.value] %}
+
+<span id="order-status-{{ order.id }}" class="inline-flex items-center gap-2">
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                 border {{ meta.css }}">
+        {{ meta.label }}
+    </span>
+    {% if order.status.value == "accepted" %}
+    <button
+        hx-patch="/orders/{{ order.id }}/cancel"
+        hx-target="#order-status-{{ order.id }}"
+        hx-swap="outerHTML"
+        hx-confirm="Отменить заказ #{{ order.id }}?"
+        class="text-xs text-red-400 hover:text-red-600 transition-colors underline
+               underline-offset-2">
+        Отменить
+    </button>
+    {% endif %}
+</span>

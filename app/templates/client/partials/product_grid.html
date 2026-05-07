@@ -1,0 +1,53 @@
+{% if products %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {% for product in products %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
+                hover:shadow-md transition-shadow flex flex-col">
+        <div class="aspect-[4/3] bg-gray-100 overflow-hidden">
+            {% if product.image_url %}
+            <img src="{{ product.image_url }}"
+                 alt="{{ product.name }}"
+                 class="w-full h-full object-cover">
+            {% else %}
+            <img src="/static/img/placeholder.webp"
+                 alt="{{ product.name }}"
+                 class="w-full h-full object-cover">
+            {% endif %}
+        </div>
+        <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-semibold text-gray-900 text-sm leading-tight mb-1">
+                {{ product.name }}
+            </h3>
+            {% if product.description %}
+            <p class="text-xs text-gray-500 leading-relaxed mb-2 flex-1">
+                {{ product.description | truncate(80) }}
+            </p>
+            {% else %}
+            <div class="flex-1"></div>
+            {% endif %}
+            <div class="flex items-center justify-between mt-3">
+                <div>
+                    <p class="text-base font-bold text-gray-900">{{ product.price }} ₽</p>
+                    <p class="text-xs text-gray-400">{{ product.weight }} г</p>
+                </div>
+                <button
+                    hx-post="/cart/items"
+                    hx-vals='{"product_id": {{ product.id }}, "quantity": 1}'
+                    hx-target="#cart-counter"
+                    hx-swap="outerHTML"
+                    class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                           text-white text-xs font-semibold rounded-xl transition-colors
+                           whitespace-nowrap">
+                    В корзину
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-16 text-gray-400">
+    <p class="text-4xl mb-3">🍕</p>
+    <p class="text-sm">В этой категории пока нет товаров</p>
+</div>
+{% endif %}

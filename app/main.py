@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api.v1 import routers
 from app.database.database import db
-from app.frontend import auth_router
+from app.frontend import auth_router, client_router
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -31,6 +31,7 @@ for router in routers:
     app.include_router(router, prefix="/api/v1")
 
 app.include_router(auth_router)
+app.include_router(client_router)
 
 
 @app.exception_handler(403)
@@ -43,6 +44,6 @@ async def not_found_handler(request: Request, exc: Exception) -> HTMLResponse:
     return templates.TemplateResponse("errors/404.html", {"request": request}, status_code=404)
 
 
-@app.exception_handler(500)
+@app.exception_handler(Exception)
 async def server_error_handler(request: Request, exc: Exception) -> HTMLResponse:
     return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)

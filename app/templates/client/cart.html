@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Корзина — Пиццерия{% endblock %}
+
+{% block nav_links %}
+<a href="/"
+   class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
+    Главная
+</a>
+<a href="/menu"
+   class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
+    Меню
+</a>
+<a href="/cart"
+   class="flex items-center gap-1.5 text-sm font-medium text-orange-500">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+    </svg>
+    {% include "client/partials/navbar_counter.html" %}
+</a>
+<a href="/orders"
+   class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
+    Заказы
+</a>
+<a href="/profile"
+   class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
+    {{ client.name.split()[0] }}
+</a>
+{% endblock %}
+
+{% block content %}
+<style>
+tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
+</style>
+
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Корзина</h1>
+
+    {% if not items %}
+    <div class="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <p class="text-5xl mb-4">🛒</p>
+        <p class="text-gray-500 mb-6">Корзина пуста</p>
+        <a href="/menu"
+           class="inline-block px-6 py-2.5 bg-orange-500 hover:bg-orange-600
+                  text-white text-sm font-semibold rounded-xl transition-colors">
+            Перейти в меню
+        </a>
+    </div>
+    {% else %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {# Cart items table #}
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                            <th class="text-left text-xs font-medium text-gray-500 uppercase
+                                       tracking-wide py-3 pl-4 pr-2">Товар</th>
+                            <th class="text-center text-xs font-medium text-gray-500 uppercase
+                                       tracking-wide py-3 px-2">Кол-во</th>
+                            <th class="text-right text-xs font-medium text-gray-500 uppercase
+                                       tracking-wide py-3 px-2">Сумма</th>
+                            <th class="py-3 pl-2 pr-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        {% include "client/partials/cart_row.html" %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="px-4 pb-4">
+                    <div id="cart-total"
+                         class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <span class="text-sm text-gray-500">Итого</span>
+                        <span class="text-xl font-bold text-gray-900 tabular-nums">
+                            {{ total | round(2) }} ₽
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Order form #}
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-6">
+                <h2 class="text-base font-bold text-gray-900 mb-4">Оформить заказ</h2>
+
+                <form action="/orders" method="post" class="space-y-4"
+                      x-data="{ delivery: 'pickup' }">
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Способ получения
+                        </label>
+                        <select name="delivery_type"
+                                x-model="delivery"
+                                class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-orange-400
+                                       focus:border-transparent bg-white">
+                            <option value="pickup">Самовывоз</option>
+                            <option value="delivery">Доставка курьером</option>
+                        </select>
+                    </div>
+
+                    <div x-show="delivery === 'delivery'" x-transition>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Адрес доставки
+                        </label>
+                        {% if addresses %}
+                        <select name="address_id"
+                                class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-orange-400
+                                       focus:border-transparent bg-white">
+                            {% for addr in addresses %}
+                            <option value="{{ addr.id }}">
+                                {{ addr.city }}, {{ addr.street }}, д. {{ addr.house }}
+                                {% if addr.apartment %}, кв. {{ addr.apartment }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        <p class="text-xs text-red-500 mt-1">
+                            Адреса не найдены.
+                            <a href="/profile" class="underline">Добавьте адрес в профиле</a>
+                        </p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Способ оплаты
+                        </label>
+                        <select name="payment_method"
+                                class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-orange-400
+                                       focus:border-transparent bg-white">
+                            <option value="cash">Наличными</option>
+                            <option value="card">Картой при получении</option>
+                            <option value="online">Онлайн</option>
+                        </select>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                                   text-white text-sm font-semibold rounded-xl transition-colors mt-2">
+                        Оформить заказ
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
