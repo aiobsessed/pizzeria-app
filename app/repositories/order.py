@@ -73,7 +73,12 @@ class OrderRepository(BaseRepository[Order]):
     async def get_by_courier(self, courier_id: int) -> list[Order]:
         result = await self.session.execute(
             select(Order)
-            .options(selectinload(Order.items).selectinload(OrderItem.product))
+            .options(
+                selectinload(Order.items).selectinload(OrderItem.product),
+                selectinload(Order.client),
+                selectinload(Order.address),
+            )
             .where(Order.courier_id == courier_id)
+            .order_by(Order.created_at.desc())
         )
         return result.scalars().all()

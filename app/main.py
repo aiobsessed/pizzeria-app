@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api.v1 import routers
 from app.database.database import db
-from app.frontend import admin_router, auth_router, client_router
+from app.frontend import admin_router, auth_router, client_router, courier_router
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -33,6 +33,7 @@ for router in routers:
 app.include_router(auth_router)
 app.include_router(client_router)
 app.include_router(admin_router)
+app.include_router(courier_router)
 
 
 @app.exception_handler(403)
