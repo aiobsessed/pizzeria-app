@@ -28,6 +28,7 @@ class OrderRepository(BaseRepository[Order]):
             .options(
                 selectinload(Order.items).selectinload(OrderItem.product),
                 selectinload(Order.client),
+                selectinload(Order.address),
                 selectinload(Order.courier).selectinload(Courier.employee),
             )
             .order_by(Order.created_at.desc())
@@ -55,6 +56,7 @@ class OrderRepository(BaseRepository[Order]):
             .options(
                 selectinload(Order.items).selectinload(OrderItem.product),
                 selectinload(Order.client),
+                selectinload(Order.address),  # БАГ ИСПРАВЛЕН: order_card.html обращается к order.address
                 selectinload(Order.courier).selectinload(Courier.employee),
             )
             .where(Order.id == order_id)
