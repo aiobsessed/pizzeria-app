@@ -1,0 +1,32 @@
+<tr id="client-row-{{ client.id }}" class="hover:bg-gray-50 transition-colors">
+    <td class="px-4 py-3 font-mono text-gray-400 text-sm">{{ client.id }}</td>
+    <td class="px-4 py-3 text-gray-900 font-medium">{{ client.name }}</td>
+    <td class="px-4 py-3 text-gray-500">{{ client.email }}</td>
+    <td class="px-4 py-3 text-gray-500">{{ client.phone }}</td>
+    <td class="px-4 py-3">
+        {% if client.is_blocked %}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                     bg-red-50 text-red-700 border border-red-200">
+            Заблокирован
+        </span>
+        {% else %}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                     bg-green-50 text-green-700 border border-green-200">
+            Активен
+        </span>
+        {% endif %}
+    </td>
+    <td class="px-4 py-3 text-gray-400 text-xs">
+        {{ client.created_at.strftime("%d.%m.%Y") }}
+    </td>
+    <td class="px-4 py-3">
+        <button hx-patch="/admin/clients/{{ client.id }}/block"
+                hx-target="#client-row-{{ client.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="{{ 'Разблокировать клиента ' if client.is_blocked else 'Заблокировать клиента ' }}{{ client.name }}?"
+                class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
+                       {{ 'border-green-200 text-green-600 hover:bg-green-50' if client.is_blocked else 'border-red-200 text-red-500 hover:bg-red-50' }}">
+            {{ "Разблокировать" if client.is_blocked else "Заблокировать" }}
+        </button>
+    </td>
+</tr>

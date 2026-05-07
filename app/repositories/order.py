@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.enums import DeliveryType, OrderStatus, PaymentMethod
 from .base import BaseRepository
-from app.models import Order, OrderItem
+from app.models import Courier, Order, OrderItem
 
 
 class OrderRepository(BaseRepository[Order]):
@@ -25,7 +25,11 @@ class OrderRepository(BaseRepository[Order]):
     ) -> list[Order]:
         query = (
             select(Order)
-            .options(selectinload(Order.items).selectinload(OrderItem.product))
+            .options(
+                selectinload(Order.items).selectinload(OrderItem.product),
+                selectinload(Order.client),
+                selectinload(Order.courier).selectinload(Courier.employee),
+            )
             .order_by(Order.created_at.desc())
         )
         if client_id is not None:
@@ -48,7 +52,11 @@ class OrderRepository(BaseRepository[Order]):
     async def get_by_id_with_items(self, order_id: int) -> Order | None:
         result = await self.session.execute(
             select(Order)
-            .options(selectinload(Order.items).selectinload(OrderItem.product))
+            .options(
+                selectinload(Order.items).selectinload(OrderItem.product),
+                selectinload(Order.client),
+                selectinload(Order.courier).selectinload(Courier.employee),
+            )
             .where(Order.id == order_id)
         )
         return result.scalar_one_or_none()

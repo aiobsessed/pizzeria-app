@@ -1,0 +1,93 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Курьеры — Админ{% endblock %}
+
+{% block content %}
+
+<h1 class="text-2xl font-bold text-gray-900 mb-6">Курьеры</h1>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# Couriers table #}
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {% if not couriers %}
+            <div class="text-center py-16 text-gray-400">
+                <p class="text-4xl mb-3">🚗</p>
+                <p class="text-sm">Курьеров пока нет</p>
+            </div>
+            {% else %}
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                        <th class="text-left font-medium text-gray-500 px-4 py-3">#</th>
+                        <th class="text-left font-medium text-gray-500 px-4 py-3">Сотрудник</th>
+                        <th class="text-left font-medium text-gray-500 px-4 py-3">Телефон</th>
+                        <th class="text-left font-medium text-gray-500 px-4 py-3">Доступен</th>
+                        <th class="px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for c in couriers %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 font-mono text-gray-400">{{ c.id }}</td>
+                        <td class="px-4 py-3 text-gray-900 font-medium">{{ c.employee.name }}</td>
+                        <td class="px-4 py-3 text-gray-500">{{ c.employee.phone }}</td>
+                        <td class="px-4 py-3">
+                            {% if c.is_available %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Да</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Нет</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            <form action="/admin/couriers/{{ c.id }}/delete" method="post">
+                                <button type="submit"
+                                        onclick="return confirm('Удалить курьера {{ c.employee.name | replace("'", "\\'") }}?')"
+                                        class="px-3 py-1.5 text-xs font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                                    Удалить
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Create courier form #}
+    <div>
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 class="text-base font-bold text-gray-900 mb-4">Добавить курьера</h2>
+            {% if available_employees %}
+            <form action="/admin/couriers/create" method="post" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Сотрудник</label>
+                    <select name="employee_id" required
+                            class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white
+                                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <option value="">Выберите сотрудника</option>
+                        {% for emp in available_employees %}
+                        <option value="{{ emp.id }}">{{ emp.name }} ({{ emp.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit"
+                        class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold
+                               rounded-xl transition-colors">
+                    Назначить курьером
+                </button>
+            </form>
+            {% else %}
+            <p class="text-sm text-gray-400 text-center py-4">
+                Все сотрудники уже назначены курьерами.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

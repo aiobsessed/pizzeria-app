@@ -1,0 +1,60 @@
+{% set STATUS_LABELS = {
+    "accepted":   "Принят",
+    "preparing":  "Готовится",
+    "on_the_way": "В пути",
+    "delivered":  "Доставлен",
+    "canceled":   "Отменён",
+} %}
+{% set DELIVERY_LABELS = {"delivery": "🚗 Доставка", "pickup": "🏪 Самовывоз"} %}
+{% set PAYMENT_LABELS  = {"cash": "Наличными", "card": "Картой", "online": "Онлайн"} %}
+
+<tr id="order-row-{{ order.id }}" class="hover:bg-gray-50 transition-colors">
+    <td class="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">#{{ order.id }}</td>
+    <td class="px-4 py-3 text-gray-900 whitespace-nowrap">
+        {{ order.client.name if order.client else order.client_id }}
+    </td>
+    <td class="px-4 py-3 font-semibold text-gray-900 tabular-nums whitespace-nowrap">
+        {{ order.total_price }} ₽
+    </td>
+    <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
+        <span>{{ DELIVERY_LABELS[order.delivery_type.value] }}</span>
+        <br>
+        <span class="text-xs">{{ PAYMENT_LABELS[order.payment_method.value] }}</span>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap">
+        <select name="status"
+                hx-patch="/admin/orders/{{ order.id }}/status"
+                hx-trigger="change"
+                hx-include="this"
+                hx-target="#order-row-{{ order.id }}"
+                hx-swap="outerHTML"
+                class="px-2 py-1 rounded-lg border border-gray-200 text-xs bg-white
+                       focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer">
+            {% for s in OrderStatus %}
+            <option value="{{ s.value }}" {{ 'selected' if order.status == s }}>
+                {{ STATUS_LABELS[s.value] }}
+            </option>
+            {% endfor %}
+        </select>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap">
+        <select name="courier_id"
+                hx-patch="/admin/orders/{{ order.id }}/courier"
+                hx-trigger="change"
+                hx-include="this"
+                hx-target="#order-row-{{ order.id }}"
+                hx-swap="outerHTML"
+                class="px-2 py-1 rounded-lg border border-gray-200 text-xs bg-white
+                       focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer">
+            <option value="">— не назначен —</option>
+            {% for c in couriers %}
+            <option value="{{ c.id }}" {{ 'selected' if order.courier_id == c.id }}>
+                {{ c.employee.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </td>
+    <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+        {{ order.created_at.strftime("%d.%m.%Y %H:%M") }}
+    </td>
+</tr>

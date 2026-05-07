@@ -18,7 +18,11 @@ class CourierRepository(BaseRepository[Courier]):
         email: str | None = None,
         is_available: bool | None = None,
     ) -> list[Courier]:
-        query = select(Courier).join(Courier.employee)
+        query = (
+            select(Courier)
+            .options(selectinload(Courier.employee))
+            .join(Courier.employee)
+        )
         if name is not None:
             query = query.where(Employee.name.ilike(f"%{name}%"))
         if phone is not None:

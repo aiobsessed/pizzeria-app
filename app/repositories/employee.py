@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from .base import BaseRepository
 from app.models import Employee
@@ -18,7 +19,7 @@ class EmployeeRepository(BaseRepository[Employee]):
         role: EmployeeRole | None = None,
         status: EmployeeStatus | None = None,
     ) -> list[Employee]:
-        query = select(Employee)
+        query = select(Employee).options(selectinload(Employee.position))
         if name is not None:
             query = query.where(Employee.name.ilike(f"%{name}%"))
         if email is not None:
