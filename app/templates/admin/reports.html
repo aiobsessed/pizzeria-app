@@ -1,0 +1,183 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Отчёты — Админ{% endblock %}
+
+{% block content %}
+
+{% set STATUS_LABELS = {
+    "accepted":   "Принят",
+    "preparing":  "Готовится",
+    "on_the_way": "В пути",
+    "delivered":  "Доставлен",
+    "canceled":   "Отменён",
+} %}
+{% set STATUS_COLORS = {
+    "accepted":   "bg-blue-100 text-blue-700",
+    "preparing":  "bg-amber-100 text-amber-700",
+    "on_the_way": "bg-orange-100 text-orange-700",
+    "delivered":  "bg-green-100 text-green-700",
+    "canceled":   "bg-gray-100 text-gray-500",
+} %}
+{% set PAYMENT_LABELS = {"cash": "Наличные", "card": "Карта", "online": "Онлайн"} %}
+
+{# Title + export buttons #}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Отчёты</h1>
+    <div class="flex items-center gap-2">
+        <a href="/admin/reports/export/excel{{ export_qs }}"
+           class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700
+                  text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+            📊 Экспорт Excel
+        </a>
+        <a href="/admin/reports/export/pdf{{ export_qs }}"
+           class="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-500 hover:bg-rose-600
+                  text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+            📄 Экспорт PDF
+        </a>
+    </div>
+</div>
+
+{# Date range filter #}
+<form method="get" action="/admin/reports"
+      class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6
+             flex items-end gap-4 flex-wrap">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1.5">Дата с</label>
+        <input type="date" name="date_from" value="{{ date_from or '' }}"
+               class="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white
+                      focus:outline-none focus:ring-2 focus:ring-indigo-400">
+    </div>
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1.5">Дата по</label>
+        <input type="date" name="date_to" value="{{ date_to or '' }}"
+               class="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white
+                      focus:outline-none focus:ring-2 focus:ring-indigo-400">
+    </div>
+    <button type="submit"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold
+                   rounded-xl transition-colors">
+        Применить
+    </button>
+    {% if date_from or date_to %}
+    <a href="/admin/reports"
+       class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100
+              rounded-xl transition-colors">
+        Сбросить
+    </a>
+    {% endif %}
+    {% if date_from or date_to %}
+    <span class="text-xs text-indigo-500 font-medium self-center">
+        Период: {{ date_from or '...' }} — {{ date_to or '...' }}
+    </span>
+    {% endif %}
+</form>
+
+{# Summary stat cards #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    {% set stat_cards = [
+        ("📦", "Всего заказов",   stats.total_orders,    "text-gray-900"),
+        ("✅", "Доставлено",      stats.delivered_count, "text-green-600"),
+        ("❌", "Отменено",        stats.cancelled_count, "text-rose-500"),
+        ("💰", "Выручка, ₽",     stats.revenue,         "text-indigo-600"),
+    ] %}
+    {% for icon, label, value, color_class in stat_cards %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div class="text-3xl mb-3">{{ icon }}</div>
+        <div class="text-2xl font-black {{ color_class }} tabular-nums">
+            {% if label == "Выручка, ₽" %}
+                {{ "%.2f"|format(value|float) }}
+            {% else %}
+                {{ value }}
+            {% endif %}
+        </div>
+        <div class="text-sm text-gray-500 mt-1">{{ label }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+{# Two-column: by status + by payment + top products #}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# Orders by status #}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="text-base font-bold text-gray-900 mb-4">По статусам</h2>
+        {% if stats.total_orders == 0 %}
+        <p class="text-sm text-gray-400 text-center py-6">Нет данных</p>
+        {% else %}
+        <div class="space-y-3">
+            {% for status in OrderStatus %}
+            {% set cnt = stats.by_status[status] %}
+            {% set pct = (cnt / stats.total_orders * 100) | round(1) if stats.total_orders else 0 %}
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                 {{ STATUS_COLORS[status.value] }}">
+                        {{ STATUS_LABELS[status.value] }}
+                    </span>
+                    <span class="text-sm font-semibold text-gray-900 tabular-nums">{{ cnt }}</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-indigo-500 rounded-full transition-all"
+                         style="width: {{ pct }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# Orders by payment method #}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="text-base font-bold text-gray-900 mb-4">По способу оплаты</h2>
+        {% if stats.total_orders == 0 %}
+        <p class="text-sm text-gray-400 text-center py-6">Нет данных</p>
+        {% else %}
+        <div class="space-y-3">
+            {% for method in PaymentMethod %}
+            {% set cnt = stats.by_payment[method] %}
+            {% set pct = (cnt / stats.total_orders * 100) | round(1) if stats.total_orders else 0 %}
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm text-gray-700 font-medium">{{ PAYMENT_LABELS[method.value] }}</span>
+                    <span class="text-sm font-semibold text-gray-900 tabular-nums">{{ cnt }}</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 rounded-full transition-all"
+                         style="width: {{ pct }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# Top products #}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="text-base font-bold text-gray-900 mb-4">Топ товаров</h2>
+        {% if not stats.top_products %}
+        <p class="text-sm text-gray-400 text-center py-6">Нет данных</p>
+        {% else %}
+        {% set max_qty = stats.top_products[0][1] %}
+        <div class="space-y-2.5">
+            {% for name, qty in stats.top_products %}
+            {% set pct = (qty / max_qty * 100) | round(1) %}
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm text-gray-700 truncate max-w-[160px]"
+                          title="{{ name }}">{{ name }}</span>
+                    <span class="text-sm font-semibold text-gray-900 tabular-nums ml-2
+                                 flex-shrink-0">{{ qty }} шт.</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-amber-400 rounded-full transition-all"
+                         style="width: {{ pct }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}
