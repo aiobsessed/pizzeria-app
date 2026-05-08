@@ -1,15 +1,19 @@
-from decimal import Decimal
+import json
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_client_from_cookie, get_db, get_flash
+from app.core.dependencies import (
+    flash_redirect,
+    get_db,
+    get_flash,
+    require_client_from_cookie,
+)
 from app.core.enums import DeliveryType, PaymentMethod
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
 from app.models import Client
-from app.repositories import CartItemRepository
 from app.schemas import CartItemCreate, CartItemUpdate, ClientUpdate, OrderCreate
 from app.services import (
     AddressService,
@@ -24,27 +28,11 @@ router = APIRouter(tags=["frontend-client"])
 templates = Jinja2Templates(directory="app/templates")
 
 
-def _flash_redirect(url: str, message: str, success: bool = False) -> RedirectResponse:
-    """
-    Редирект с flash-сообщением.
-    success=True  → «ok:сообщение» → base.html рендерит зелёным
-    success=False → «сообщение»    → base.html рендерит красным (ошибка)
-    """
-    value = f"ok:{message}" if success else message
-    response = RedirectResponse(url=url, status_code=302)
-    response.set_cookie("flash", value, max_age=10, httponly=True, samesite="lax")
+def _htmx_flash(response: HTMLResponse, message: str, success: bool = False) -> HTMLResponse:
+    response.headers["HX-Trigger"] = json.dumps(
+        {"showflash": {"message": message, "success": success}}
+    )
     return response
-
-
-async def _load_cart_summary(
-    client_id: int, session: AsyncSession
-) -> tuple[list, Decimal, int]:
-    """Возвращает (items_with_products, total, cart_count)."""
-    cart = await CartService(session).get_by_client(client_id)
-    items = await CartItemRepository(session).get_by_cart(cart.id)
-    total = sum(item.quantity * item.product.price for item in items)
-    count = sum(item.quantity for item in items)
-    return items, total, count
 
 
 # ── Главная страница ──────────────────────────────────────────────────────────
@@ -53,16 +41,13 @@ async def _load_cart_summary(
 @router.get("/", response_class=HTMLResponse)
 async def index(
     request: Request,
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if client is None:
-        return RedirectResponse(url="/login", status_code=302)
-
     categories = await CategoryService(session).get_all_active()
     products = await ProductService(session).get_all_available()
-    _, _, cart_count = await _load_cart_summary(client.id, session)
+    _, _, cart_count = await CartService(session).get_summary(client.id)
 
     response = templates.TemplateResponse("client/index.html", {
         "request": request,
@@ -83,20 +68,17 @@ async def index(
 async def menu(
     request: Request,
     category_id: int | None = None,
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if client is None:
-        return RedirectResponse(url="/login", status_code=302)
-
     categories = await CategoryService(session).get_all_active()
     products = (
         await ProductService(session).get_available_by_category(category_id)
         if category_id is not None
         else await ProductService(session).get_all_available()
     )
-    _, _, cart_count = await _load_cart_summary(client.id, session)
+    _, _, cart_count = await CartService(session).get_summary(client.id)
 
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse("client/partials/product_grid.html", {
@@ -123,14 +105,11 @@ async def menu(
 @router.get("/cart", response_class=HTMLResponse)
 async def cart_page(
     request: Request,
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if client is None:
-        return RedirectResponse(url="/login", status_code=302)
-
-    items, total, cart_count = await _load_cart_summary(client.id, session)
+    items, total, cart_count = await CartService(session).get_summary(client.id)
     addresses = await AddressService(session).get_by_client(client.id)
 
     response = templates.TemplateResponse("client/cart.html", {
@@ -153,24 +132,27 @@ async def add_cart_item(
     request: Request,
     product_id: int = Form(),
     quantity: int = Form(default=1),
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    if client is None:
-        return HTMLResponse("", status_code=401)
-
+    error: str | None = None
     try:
         await CartService(session).add_item(
             client.id, CartItemCreate(product_id=product_id, quantity=quantity)
         )
-    except (NotFoundError, BusinessError):
+    except BusinessError as e:
+        error = str(e)
+    except NotFoundError:
         pass
 
-    _, _, cart_count = await _load_cart_summary(client.id, session)
-    return templates.TemplateResponse("client/partials/navbar_counter.html", {
+    _, _, cart_count = await CartService(session).get_summary(client.id)
+    response = templates.TemplateResponse("client/partials/navbar_counter.html", {
         "request": request,
         "cart_count": cart_count,
     })
+    if error:
+        _htmx_flash(response, error)
+    return response
 
 
 @router.patch("/cart/items/{item_id}", response_class=HTMLResponse)
@@ -178,12 +160,9 @@ async def update_cart_item(
     request: Request,
     item_id: int,
     quantity: int = Form(),
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    if client is None:
-        return HTMLResponse("", status_code=401)
-
     try:
         await CartService(session).update_item(
             client.id, item_id, CartItemUpdate(quantity=quantity)
@@ -191,14 +170,14 @@ async def update_cart_item(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    items, total, _ = await _load_cart_summary(client.id, session)
+    items, total, _ = await CartService(session).get_summary(client.id)
     updated_item = next((i for i in items if i.id == item_id), None)
 
     return templates.TemplateResponse("client/partials/cart_row.html", {
         "request": request,
         "item": updated_item,
         "total": total,
-        "htmx_request": True,  # разрешает рендер OOB-блока итого
+        "htmx_request": True,
     })
 
 
@@ -206,20 +185,15 @@ async def update_cart_item(
 async def delete_cart_item(
     request: Request,
     item_id: int,
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    if client is None:
-        return HTMLResponse("", status_code=401)
-
     try:
         await CartService(session).remove_item(client.id, item_id)
     except NotFoundError:
         pass
 
-    # Явный flush, чтобы DELETE стал виден последующему SELECT (autoflush=False)
-    await session.flush()
-    _, total, _ = await _load_cart_summary(client.id, session)
+    _, total, _ = await CartService(session).get_summary(client.id)
 
     return templates.TemplateResponse("client/partials/cart_total.html", {
         "request": request,
@@ -233,15 +207,12 @@ async def delete_cart_item(
 @router.get("/orders", response_class=HTMLResponse)
 async def orders_page(
     request: Request,
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if client is None:
-        return RedirectResponse(url="/login", status_code=302)
-
     orders = await OrderService(session).get_by_client(client.id)
-    _, _, cart_count = await _load_cart_summary(client.id, session)
+    _, _, cart_count = await CartService(session).get_summary(client.id)
 
     response = templates.TemplateResponse("client/orders.html", {
         "request": request,
@@ -259,12 +230,9 @@ async def create_order(
     delivery_type: str = Form(),
     payment_method: str = Form(),
     address_id: int | None = Form(default=None),
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if client is None:
-        return RedirectResponse(url="/login", status_code=302)
-
     try:
         data = OrderCreate(
             delivery_type=DeliveryType(delivery_type),
@@ -273,26 +241,23 @@ async def create_order(
         )
         await OrderService(session).create(client.id, data)
     except (NotFoundError, BusinessError, ValueError) as e:
-        return _flash_redirect("/cart", str(e))
+        return flash_redirect("/cart", str(e))
 
-    # БАГ ИСПРАВЛЕН: success=True — сообщение об успехе теперь зелёное
-    return _flash_redirect("/orders", "Заказ успешно оформлен!", success=True)
+    return flash_redirect("/orders", "Заказ успешно оформлен!", success=True)
 
 
 @router.patch("/orders/{order_id}/cancel", response_class=HTMLResponse)
 async def cancel_order(
     request: Request,
     order_id: int,
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    if client is None:
-        return HTMLResponse("", status_code=401)
-
+    error: str | None = None
     try:
         order = await OrderService(session).own_cancel(client.id, order_id)
-    except (ConflictError, BusinessError):
-        # Заказ уже отменён или не в статусе «принят» — показываем текущий статус
+    except (ConflictError, BusinessError) as e:
+        error = str(e)
         try:
             order = await OrderService(session).get_own_order(client.id, order_id)
         except NotFoundError:
@@ -300,10 +265,13 @@ async def cancel_order(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    return templates.TemplateResponse("client/partials/order_status.html", {
+    response = templates.TemplateResponse("client/partials/order_status.html", {
         "request": request,
         "order": order,
     })
+    if error:
+        _htmx_flash(response, error)
+    return response
 
 
 # ── Профиль ───────────────────────────────────────────────────────────────────
@@ -312,15 +280,12 @@ async def cancel_order(
 @router.get("/profile", response_class=HTMLResponse)
 async def profile_page(
     request: Request,
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if client is None:
-        return RedirectResponse(url="/login", status_code=302)
-
     addresses = await AddressService(session).get_by_client(client.id)
-    _, _, cart_count = await _load_cart_summary(client.id, session)
+    _, _, cart_count = await CartService(session).get_summary(client.id)
 
     response = templates.TemplateResponse("client/profile.html", {
         "request": request,
@@ -339,12 +304,9 @@ async def update_profile(
     email: str = Form(""),
     phone: str = Form(""),
     password: str = Form(""),
-    client: Client | None = Depends(get_current_client_from_cookie),
+    client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if client is None:
-        return RedirectResponse(url="/login", status_code=302)
-
     try:
         await ClientService(session).update(
             client,
@@ -356,7 +318,6 @@ async def update_profile(
             ),
         )
     except (ConflictError, ValueError) as e:
-        return _flash_redirect("/profile", str(e))
+        return flash_redirect("/profile", str(e))
 
-    # БАГ ИСПРАВЛЕН: success=True — сообщение об успехе теперь зелёное
-    return _flash_redirect("/profile", "Профиль успешно обновлён", success=True)
+    return flash_redirect("/profile", "Профиль успешно обновлён", success=True)

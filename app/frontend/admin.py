@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_employee_from_cookie, get_db, get_flash
+from app.core.dependencies import flash_redirect, get_db, get_flash, require_admin_from_cookie
 from app.core.enums import DeliveryType, EmployeeRole, EmployeeStatus, OrderStatus, PaymentMethod
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import Employee
@@ -35,30 +35,16 @@ router = APIRouter(prefix="/admin", tags=["frontend-admin"])
 templates = Jinja2Templates(directory="app/templates")
 
 
-def _flash_redirect(url: str, message: str, success: bool = False) -> RedirectResponse:
-    value = f"ok:{message}" if success else message
-    response = RedirectResponse(url=url, status_code=302)
-    response.set_cookie("flash", value, max_age=10, httponly=True, samesite="lax")
-    return response
-
-
-def _is_admin(employee: Employee | None) -> bool:
-    return employee is not None and employee.role == EmployeeRole.admin
-
-
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 
 @router.get("", response_class=HTMLResponse)
 async def dashboard(
     request: Request,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     orders = await OrderService(session).get_all_with_items()
     clients = await ClientService(session).get_all()
     products = await ProductService(session).get_all()
@@ -89,13 +75,10 @@ async def dashboard(
 async def orders_page(
     request: Request,
     status: str | None = None,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     status_enum: OrderStatus | None = None
     if status:
         try:
@@ -129,12 +112,9 @@ async def update_order_status(
     request: Request,
     order_id: int,
     status: OrderStatus = Form(),
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return HTMLResponse("", status_code=403)
-
     try:
         order = await OrderService(session).update(order_id, OrderUpdate(status=status))
     except NotFoundError:
@@ -157,12 +137,9 @@ async def assign_courier(
     request: Request,
     order_id: int,
     courier_id: str = Form(default=""),
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return HTMLResponse("", status_code=403)
-
     courier_id_int: int | None = int(courier_id) if courier_id.strip() else None
     try:
         order = await OrderService(session).update(
@@ -189,13 +166,10 @@ async def assign_courier(
 @router.get("/clients", response_class=HTMLResponse)
 async def clients_page(
     request: Request,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     clients = await ClientService(session).get_all()
 
     response = templates.TemplateResponse(
@@ -215,12 +189,9 @@ async def clients_page(
 async def block_client(
     request: Request,
     client_id: int,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return HTMLResponse("", status_code=403)
-
     try:
         client = await ClientService(session).block(client_id)
     except NotFoundError:
@@ -241,13 +212,10 @@ async def block_client(
 @router.get("/products", response_class=HTMLResponse)
 async def products_page(
     request: Request,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     products = await ProductService(session).get_all()
     categories = await CategoryService(session).get_all()
 
@@ -275,12 +243,9 @@ async def create_product(
     composition: str = Form(default=""),
     image_url: str = Form(default=""),
     is_available: str = Form(default=""),
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await ProductService(session).create(
             ProductCreate(
@@ -295,9 +260,9 @@ async def create_product(
             )
         )
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/products", str(e))
+        return flash_redirect("/admin/products", str(e))
 
-    return _flash_redirect("/admin/products", "Товар создан", success=True)
+    return flash_redirect("/admin/products", "Товар создан", success=True)
 
 
 @router.post("/products/{product_id}/update")
@@ -311,12 +276,9 @@ async def update_product(
     composition: str = Form(default=""),
     image_url: str = Form(default=""),
     is_available: str = Form(default=""),
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await ProductService(session).update(
             product_id,
@@ -332,26 +294,23 @@ async def update_product(
             ),
         )
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/products", str(e))
+        return flash_redirect("/admin/products", str(e))
 
-    return _flash_redirect("/admin/products", "Товар обновлён", success=True)
+    return flash_redirect("/admin/products", "Товар обновлён", success=True)
 
 
 @router.post("/products/{product_id}/delete")
 async def delete_product(
     product_id: int,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await ProductService(session).delete(product_id)
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/products", str(e))
+        return flash_redirect("/admin/products", str(e))
 
-    return _flash_redirect("/admin/products", "Товар деактивирован", success=True)
+    return flash_redirect("/admin/products", "Товар деактивирован", success=True)
 
 
 # ── Categories ────────────────────────────────────────────────────────────────
@@ -360,13 +319,10 @@ async def delete_product(
 @router.get("/categories", response_class=HTMLResponse)
 async def categories_page(
     request: Request,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     categories = await CategoryService(session).get_all()
 
     response = templates.TemplateResponse(
@@ -387,20 +343,17 @@ async def create_category(
     name: str = Form(),
     slug: str = Form(),
     is_active: str = Form(default=""),
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await CategoryService(session).create(
             CategoryCreate(name=name, slug=slug, is_active=is_active == "on")
         )
     except ConflictError as e:
-        return _flash_redirect("/admin/categories", str(e))
+        return flash_redirect("/admin/categories", str(e))
 
-    return _flash_redirect("/admin/categories", "Категория создана", success=True)
+    return flash_redirect("/admin/categories", "Категория создана", success=True)
 
 
 @router.post("/categories/{category_id}/update")
@@ -409,38 +362,32 @@ async def update_category(
     name: str = Form(),
     slug: str = Form(),
     is_active: str = Form(default=""),
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await CategoryService(session).update(
             category_id,
             CategoryUpdate(name=name, slug=slug, is_active=is_active == "on"),
         )
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/categories", str(e))
+        return flash_redirect("/admin/categories", str(e))
 
-    return _flash_redirect("/admin/categories", "Категория обновлена", success=True)
+    return flash_redirect("/admin/categories", "Категория обновлена", success=True)
 
 
 @router.post("/categories/{category_id}/delete")
 async def delete_category(
     category_id: int,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await CategoryService(session).delete(category_id)
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/categories", str(e))
+        return flash_redirect("/admin/categories", str(e))
 
-    return _flash_redirect("/admin/categories", "Категория деактивирована", success=True)
+    return flash_redirect("/admin/categories", "Категория деактивирована", success=True)
 
 
 # ── Employees ─────────────────────────────────────────────────────────────────
@@ -449,13 +396,10 @@ async def delete_category(
 @router.get("/employees", response_class=HTMLResponse)
 async def employees_page(
     request: Request,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     employees = await EmployeeService(session).get_all()
     positions = await PositionService(session).get_all()
 
@@ -484,12 +428,9 @@ async def create_employee(
     inn: str = Form(),
     role: str = Form(),
     password: str = Form(),
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await EmployeeService(session).create(
             EmployeeCreate(
@@ -503,9 +444,9 @@ async def create_employee(
             )
         )
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/employees", str(e))
+        return flash_redirect("/admin/employees", str(e))
 
-    return _flash_redirect("/admin/employees", "Сотрудник создан", success=True)
+    return flash_redirect("/admin/employees", "Сотрудник создан", success=True)
 
 
 @router.post("/employees/{employee_id}/update")
@@ -517,12 +458,9 @@ async def update_employee(
     phone: str = Form(),
     inn: str = Form(),
     role: str = Form(),
-    current_employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(current_employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await EmployeeService(session).update(
             employee_id,
@@ -536,44 +474,38 @@ async def update_employee(
             ),
         )
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/employees", str(e))
+        return flash_redirect("/admin/employees", str(e))
 
-    return _flash_redirect("/admin/employees", "Сотрудник обновлён", success=True)
+    return flash_redirect("/admin/employees", "Сотрудник обновлён", success=True)
 
 
 @router.post("/employees/{employee_id}/status")
 async def update_employee_status(
     employee_id: int,
     status: str = Form(),
-    current_employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(current_employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await EmployeeService(session).update_status(employee_id, EmployeeStatus(status))
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/employees", str(e))
+        return flash_redirect("/admin/employees", str(e))
 
-    return _flash_redirect("/admin/employees", "Статус обновлён", success=True)
+    return flash_redirect("/admin/employees", "Статус обновлён", success=True)
 
 
 @router.post("/employees/{employee_id}/delete")
 async def delete_employee(
     employee_id: int,
-    current_employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(current_employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await EmployeeService(session).delete(employee_id)
     except NotFoundError as e:
-        return _flash_redirect("/admin/employees", str(e))
+        return flash_redirect("/admin/employees", str(e))
 
-    return _flash_redirect("/admin/employees", "Сотрудник удалён", success=True)
+    return flash_redirect("/admin/employees", "Сотрудник удалён", success=True)
 
 
 # ── Couriers ──────────────────────────────────────────────────────────────────
@@ -582,13 +514,10 @@ async def delete_employee(
 @router.get("/couriers", response_class=HTMLResponse)
 async def couriers_page(
     request: Request,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     couriers = await CourierService(session).get_all()
     all_employees = await EmployeeService(session).get_all()
     courier_employee_ids = {c.employee_id for c in couriers}
@@ -611,35 +540,29 @@ async def couriers_page(
 @router.post("/couriers/create")
 async def create_courier(
     employee_id: int = Form(),
-    current_employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(current_employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await CourierService(session).create(CourierCreate(employee_id=employee_id))
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/couriers", str(e))
+        return flash_redirect("/admin/couriers", str(e))
 
-    return _flash_redirect("/admin/couriers", "Курьер добавлен", success=True)
+    return flash_redirect("/admin/couriers", "Курьер добавлен", success=True)
 
 
 @router.post("/couriers/{courier_id}/delete")
 async def delete_courier(
     courier_id: int,
-    current_employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(current_employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await CourierService(session).delete(courier_id)
     except NotFoundError as e:
-        return _flash_redirect("/admin/couriers", str(e))
+        return flash_redirect("/admin/couriers", str(e))
 
-    return _flash_redirect("/admin/couriers", "Курьер удалён", success=True)
+    return flash_redirect("/admin/couriers", "Курьер удалён", success=True)
 
 
 # ── Positions ─────────────────────────────────────────────────────────────────
@@ -648,13 +571,10 @@ async def delete_courier(
 @router.get("/positions", response_class=HTMLResponse)
 async def positions_page(
     request: Request,
-    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    if not _is_admin(employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     positions = await PositionService(session).get_all()
 
     response = templates.TemplateResponse(
@@ -673,50 +593,41 @@ async def positions_page(
 @router.post("/positions/create")
 async def create_position(
     name: str = Form(),
-    current_employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(current_employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await PositionService(session).create(PositionCreate(name=name))
     except ConflictError as e:
-        return _flash_redirect("/admin/positions", str(e))
+        return flash_redirect("/admin/positions", str(e))
 
-    return _flash_redirect("/admin/positions", "Должность создана", success=True)
+    return flash_redirect("/admin/positions", "Должность создана", success=True)
 
 
 @router.post("/positions/{position_id}/update")
 async def update_position(
     position_id: int,
     name: str = Form(),
-    current_employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(current_employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await PositionService(session).update(position_id, PositionUpdate(name=name))
     except (NotFoundError, ConflictError) as e:
-        return _flash_redirect("/admin/positions", str(e))
+        return flash_redirect("/admin/positions", str(e))
 
-    return _flash_redirect("/admin/positions", "Должность обновлена", success=True)
+    return flash_redirect("/admin/positions", "Должность обновлена", success=True)
 
 
 @router.post("/positions/{position_id}/delete")
 async def delete_position(
     position_id: int,
-    current_employee: Employee | None = Depends(get_current_employee_from_cookie),
+    _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    if not _is_admin(current_employee):
-        return RedirectResponse(url="/staff/login", status_code=302)
-
     try:
         await PositionService(session).delete(position_id)
     except NotFoundError as e:
-        return _flash_redirect("/admin/positions", str(e))
+        return flash_redirect("/admin/positions", str(e))
 
-    return _flash_redirect("/admin/positions", "Должность удалена", success=True)
+    return flash_redirect("/admin/positions", "Должность удалена", success=True)

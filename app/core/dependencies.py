@@ -1,15 +1,16 @@
 from collections.abc import AsyncGenerator
 
 from fastapi import Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .exceptions import AuthError
+from .exceptions import AuthError, FrontendRedirect
 from .security import verify_token
 from .enums import EmployeeRole
 from app.database.database import db
-from app.models import Client, Employee, Courier
-from app.repositories import ClientRepository, EmployeeRepository, CourierRepository
+from app.models import Client, Courier, Employee
+from app.repositories import ClientRepository, CourierRepository, EmployeeRepository
 
 security = HTTPBearer()
 
@@ -17,6 +18,24 @@ security = HTTPBearer()
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with db.session() as session:
         yield session
+
+
+# ── Утилиты ───────────────────────────────────────────────────────────────────
+
+
+def flash_redirect(url: str, message: str, success: bool = False) -> RedirectResponse:
+    """Редирект с flash-сообщением в cookie.
+    success=True  → «ok:сообщение» → base.html рендерит зелёным
+    success=False → «сообщение»    → base.html рендерит красным
+    """
+    value = f"ok:{message}" if success else message
+    response = RedirectResponse(url=url, status_code=302)
+    response.set_cookie("flash", value, max_age=10, httponly=True, samesite="lax")
+    return response
+
+
+def get_flash(request: Request) -> str | None:
+    return request.cookies.get("flash")
 
 
 # ── Поток: API (Bearer token) ──────────────────────────────────────────────────
@@ -86,15 +105,11 @@ async def require_courier(
 # ── Поток: Frontend (HttpOnly cookie) ─────────────────────────────────────────
 
 
-def get_flash(request: Request) -> str | None:
-    return request.cookies.get("flash")
-
-
 async def get_current_client_from_cookie(
     request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> Client | None:
-    """Извлекает клиента из HttpOnly cookie (Frontend). Возвращает None если не авторизован."""
+    """Извлекает клиента из HttpOnly cookie. Возвращает None если не авторизован."""
     token = request.cookies.get("access_token")
     if not token:
         return None
@@ -114,7 +129,7 @@ async def get_current_employee_from_cookie(
     request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> Employee | None:
-    """Извлекает сотрудника из HttpOnly cookie (Frontend). Возвращает None если не авторизован."""
+    """Извлекает сотрудника из HttpOnly cookie. Возвращает None если не авторизован."""
     token = request.cookies.get("access_token")
     if not token:
         return None
@@ -125,3 +140,37 @@ async def get_current_employee_from_cookie(
     if payload.get("sub_type") != "employee":
         return None
     return await EmployeeRepository(session).get_by_id(int(payload["sub"]))
+
+
+# ── Frontend-зависимости с автоматическим редиректом ──────────────────────────
+# Поднимают FrontendRedirect — обработчик в main.py конвертирует его в:
+#   - 302 RedirectResponse для обычных запросов
+#   - 401 HTMLResponse("") для HTMX-запросов
+
+
+async def require_client_from_cookie(
+    client: Client | None = Depends(get_current_client_from_cookie),
+) -> Client:
+    if client is None:
+        raise FrontendRedirect("/login")
+    return client
+
+
+async def require_admin_from_cookie(
+    employee: Employee | None = Depends(get_current_employee_from_cookie),
+) -> Employee:
+    if employee is None or employee.role != EmployeeRole.admin:
+        raise FrontendRedirect("/staff/login")
+    return employee
+
+
+async def require_courier_from_cookie(
+    employee: Employee | None = Depends(get_current_employee_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> Courier:
+    if employee is None or employee.role != EmployeeRole.courier:
+        raise FrontendRedirect("/staff/login")
+    courier = await CourierRepository(session).get_by_employee(employee.id)
+    if courier is None:
+        raise FrontendRedirect("/staff/login")
+    return courier

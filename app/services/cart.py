@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
@@ -12,9 +14,6 @@ class CartService:
         self.cart_item_repo = CartItemRepository(session)
         self.product_repo = ProductRepository(session)
 
-    # -----------------------
-    # Internal helper
-    # -----------------------
     async def get_by_client(self, client_id: int) -> Cart:
         cart = await self.cart_repo.get_by_client(client_id)
         if cart is None:
@@ -22,6 +21,15 @@ class CartService:
             await self.cart_repo.create(new_cart)
             cart = await self.cart_repo.get_by_client(client_id)
         return cart
+
+    async def get_summary(self, client_id: int) -> tuple[list[CartItem], Decimal, int]:
+        cart = await self.get_by_client(client_id)
+        items = await self.cart_item_repo.get_by_cart(cart.id)
+        total: Decimal = sum(
+            (item.quantity * item.product.price for item in items), Decimal(0)
+        )
+        count = sum(item.quantity for item in items)
+        return items, total, count
 
     # -----------------------
     # Client methods

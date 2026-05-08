@@ -4,11 +4,12 @@ from contextlib import asynccontextmanager
 from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.api.v1 import routers
+from app.core.exceptions import FrontendRedirect
 from app.database.database import db
 from app.frontend import admin_router, auth_router, client_router, courier_router
 
@@ -34,6 +35,13 @@ app.include_router(auth_router)
 app.include_router(client_router)
 app.include_router(admin_router)
 app.include_router(courier_router)
+
+
+@app.exception_handler(FrontendRedirect)
+async def frontend_redirect_handler(request: Request, exc: FrontendRedirect) -> HTMLResponse | RedirectResponse:
+    if request.headers.get("HX-Request"):
+        return HTMLResponse("", status_code=401)
+    return RedirectResponse(url=exc.url, status_code=302)
 
 
 @app.exception_handler(403)

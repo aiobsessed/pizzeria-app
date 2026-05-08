@@ -29,12 +29,7 @@
     </nav>
     {% endblock %}
 
-    {#
-      БАГ ИСПРАВЛЕН: flash-сообщения теперь имеют два варианта стиля:
-        - «ok:сообщение» → зелёный (успех)
-        - «сообщение»    → красный (ошибка)
-      Бэкенд ставит префикс «ok:» через _flash_redirect(…, success=True).
-    #}
+    {# Flash из cookie — для обычных редиректов (полная перезагрузка страницы) #}
     {% if flash %}
     {% set is_success = flash.startswith("ok:") %}
     {% set flash_text = flash[3:] if is_success else flash %}
@@ -60,6 +55,28 @@
         <button @click="visible = false" class="{{ flash_btn }} flex-shrink-0">✕</button>
     </div>
     {% endif %}
+
+    {# Flash из HTMX — для ошибок в частичных запросах (HX-Trigger: showflash) #}
+    <div x-data="{ htmxFlash: null }"
+         @showflash.window="htmxFlash = $event.detail; setTimeout(() => htmxFlash = null, 4000)">
+        <div x-show="htmxFlash"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-300"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-2"
+             :class="htmxFlash?.success
+                 ? 'bg-green-50 border-green-300 text-green-700'
+                 : 'bg-red-50 border-red-300 text-red-700'"
+             class="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-sm w-full px-5 py-3
+                    border text-sm rounded-xl shadow-lg flex items-center justify-between gap-4">
+            <span x-text="htmxFlash?.message"></span>
+            <button @click="htmxFlash = null"
+                    :class="htmxFlash?.success ? 'text-green-400 hover:text-green-600' : 'text-red-400 hover:text-red-600'"
+                    class="flex-shrink-0">✕</button>
+        </div>
+    </div>
 
     <main class="flex-1 flex flex-col">
         {% block content %}{% endblock %}

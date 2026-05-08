@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.dependencies import get_db, get_flash
+from app.core.dependencies import flash_redirect, get_db, get_flash
 from app.core.enums import EmployeeRole
 from app.core.exceptions import AuthError, ConflictError
 from app.core.security import create_access_token
@@ -13,18 +13,6 @@ from app.services import ClientService, EmployeeService
 
 router = APIRouter(tags=["frontend-auth"])
 templates = Jinja2Templates(directory="app/templates")
-
-
-def _flash_redirect(url: str, message: str, success: bool = False) -> RedirectResponse:
-    """
-    Редирект с flash-сообщением.
-    success=True  → «ok:сообщение» → base.html рендерит зелёным
-    success=False → «сообщение»    → base.html рендерит красным (ошибка)
-    """
-    value = f"ok:{message}" if success else message
-    response = RedirectResponse(url=url, status_code=302)
-    response.set_cookie("flash", value, max_age=10, httponly=True, samesite="lax")
-    return response
 
 
 # ── Клиентский логин ──────────────────────────────────────────────────────────
@@ -49,7 +37,7 @@ async def login_submit(
     try:
         user = await ClientService(session).authenticate(login=login, password=password)
     except AuthError:
-        return _flash_redirect("/login", "Неверный логин или пароль")
+        return flash_redirect("/login", "Неверный логин или пароль")
 
     token = create_access_token(subject_id=user.id, subject_type="client")
     response = RedirectResponse(url="/", status_code=302)
@@ -87,7 +75,7 @@ async def staff_login_submit(
     try:
         user = await EmployeeService(session).authenticate(login=login, password=password)
     except AuthError:
-        return _flash_redirect("/staff/login", "Неверный логин или пароль")
+        return flash_redirect("/staff/login", "Неверный логин или пароль")
 
     token = create_access_token(subject_id=user.id, subject_type="employee", role=user.role.value)
     redirect_url = "/admin" if user.role == EmployeeRole.admin else "/courier"
@@ -130,10 +118,9 @@ async def register_submit(
             ClientCreate(name=name, email=email, phone=phone, password=password)
         )
     except ConflictError as e:
-        return _flash_redirect("/register", str(e))
+        return flash_redirect("/register", str(e))
 
-    # БАГ ИСПРАВЛЕН: success=True — сообщение об успехе теперь зелёное
-    return _flash_redirect("/login", "Регистрация прошла успешно. Войдите в аккаунт.", success=True)
+    return flash_redirect("/login", "Регистрация прошла успешно. Войдите в аккаунт.", success=True)
 
 
 @router.post("/logout")

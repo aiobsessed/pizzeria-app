@@ -32,13 +32,6 @@
 
     <h1 class="text-2xl font-bold text-gray-900 mb-6">Меню</h1>
 
-    {#
-      БАГ ИСПРАВЛЕН: раньше кнопки-фильтры подсвечивались только при SSR
-      (на основании active_category_id из Python-контекста) и не обновлялись
-      после HTMX-запроса. Alpine.js теперь ведёт реактивное состояние active
-      на стороне клиента — кнопка подсвечивается сразу при клике, независимо
-      от ответа сервера.
-    #}
     {% if categories %}
     <div class="flex gap-2 flex-wrap mb-8"
          x-data="{ active: {{ active_category_id if active_category_id is not none else 'null' }} }">

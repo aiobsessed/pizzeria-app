@@ -92,12 +92,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-6">
                 <h2 class="text-base font-bold text-gray-900 mb-4">Оформить заказ</h2>
 
-                {#
-                  БАГ ИСПРАВЛЕН: x-show скрывает элемент, но не убирает его из формы.
-                  Добавлен :disabled="delivery !== 'delivery'" — отключённые поля
-                  браузер не отправляет, поэтому address_id не попадёт на сервер
-                  при выборе самовывоза.
-                #}
                 <form action="/orders" method="post" class="space-y-4"
                       x-data="{ delivery: 'pickup' }">
 
