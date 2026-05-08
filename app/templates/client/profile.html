@@ -96,29 +96,61 @@
         </form>
     </div>
 
-    {# Addresses (read-only) #}
+    {# Addresses #}
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h2 class="text-base font-semibold text-gray-900 mb-4">Адреса доставки</h2>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold text-gray-900">Адреса доставки</h2>
+            <details class="group relative">
+                <summary class="list-none cursor-pointer px-3.5 py-1.5 bg-orange-500
+                                hover:bg-orange-600 active:bg-orange-700 text-white text-sm
+                                font-semibold rounded-xl transition-colors select-none">
+                    + Добавить
+                </summary>
+                <div class="absolute right-0 mt-2 w-80 bg-white rounded-2xl border
+                            border-gray-100 shadow-lg p-4 z-10">
+                    <p class="text-sm font-semibold text-gray-900 mb-3">Новый адрес</p>
+                    <form action="/profile/addresses" method="post" class="space-y-3">
+                        <input type="text" name="city" placeholder="Город" required maxlength="50"
+                               class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
+                                      focus:outline-none focus:ring-2 focus:ring-orange-400
+                                      focus:border-transparent placeholder:text-gray-400 transition">
+                        <input type="text" name="street" placeholder="Улица" required maxlength="150"
+                               class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
+                                      focus:outline-none focus:ring-2 focus:ring-orange-400
+                                      focus:border-transparent placeholder:text-gray-400 transition">
+                        <div class="flex gap-2">
+                            <input type="text" name="house" placeholder="Дом" required maxlength="20"
+                                   class="w-1/2 px-3.5 py-2 rounded-xl border border-gray-200 text-sm
+                                          focus:outline-none focus:ring-2 focus:ring-orange-400
+                                          focus:border-transparent placeholder:text-gray-400 transition">
+                            <input type="text" name="apartment" placeholder="Квартира" maxlength="20"
+                                   class="w-1/2 px-3.5 py-2 rounded-xl border border-gray-200 text-sm
+                                          focus:outline-none focus:ring-2 focus:ring-orange-400
+                                          focus:border-transparent placeholder:text-gray-400 transition">
+                        </div>
+                        <input type="text" name="comment" placeholder="Комментарий (необязательно)" maxlength="255"
+                               class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
+                                      focus:outline-none focus:ring-2 focus:ring-orange-400
+                                      focus:border-transparent placeholder:text-gray-400 transition">
+                        <button type="submit"
+                                class="w-full py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                                       text-white text-sm font-semibold rounded-xl transition-colors">
+                            Сохранить адрес
+                        </button>
+                    </form>
+                </div>
+            </details>
+        </div>
 
         {% if addresses %}
         <div class="space-y-3">
             {% for addr in addresses %}
-            <div class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50">
-                <span class="text-gray-400 mt-0.5">📍</span>
-                <div class="text-sm text-gray-700 leading-relaxed">
-                    <p>{{ addr.city }}, {{ addr.street }}, д. {{ addr.house }}
-                    {% if addr.apartment %}, кв. {{ addr.apartment }}{% endif %}</p>
-                    {% if addr.comment %}
-                    <p class="text-xs text-gray-400 mt-0.5">{{ addr.comment }}</p>
-                    {% endif %}
-                </div>
-            </div>
+            {% include "client/partials/address_card.html" %}
             {% endfor %}
         </div>
         {% else %}
         <p class="text-sm text-gray-400 text-center py-6">
             У вас пока нет сохранённых адресов.
-            <br>Они появятся после первого оформления доставки.
         </p>
         {% endif %}
     </div>
