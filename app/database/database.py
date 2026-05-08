@@ -18,7 +18,7 @@ class Database:
     def __init__(self) -> None:
         self._engine: AsyncEngine = create_async_engine(
             url=settings.DATABASE_URL,
-            echo=True,  # убрать в проде
+            echo=settings.DEBUG,
         )
         self._session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
             bind=self._engine, expire_on_commit=False, autoflush=False

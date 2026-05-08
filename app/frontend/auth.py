@@ -23,7 +23,7 @@ async def login_page(
     request: Request,
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    response = templates.TemplateResponse("auth/login.html", {"request": request, "flash": flash})
+    response = templates.TemplateResponse(request, "auth/login.html", {"flash": flash})
     response.delete_cookie("flash")
     return response
 
@@ -59,9 +59,7 @@ async def staff_login_page(
     request: Request,
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    response = templates.TemplateResponse(
-        "auth/staff_login.html", {"request": request, "flash": flash}
-    )
+    response = templates.TemplateResponse(request, "auth/staff_login.html", {"flash": flash})
     response.delete_cookie("flash")
     return response
 
@@ -98,9 +96,7 @@ async def register_page(
     request: Request,
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    response = templates.TemplateResponse(
-        "auth/register.html", {"request": request, "flash": flash}
-    )
+    response = templates.TemplateResponse(request, "auth/register.html", {"flash": flash})
     response.delete_cookie("flash")
     return response
 

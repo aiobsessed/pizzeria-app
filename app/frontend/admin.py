@@ -303,9 +303,9 @@ async def dashboard(
     couriers = await CourierService(session).get_all()
 
     response = templates.TemplateResponse(
+        request,
         "admin/dashboard.html",
         {
-            "request":          request,
             "employee":         employee,
             "flash":            flash,
             "orders_count":     len(orders),
@@ -342,9 +342,9 @@ async def orders_page(
     couriers = await CourierService(session).get_all()
 
     response = templates.TemplateResponse(
+        request,
         "admin/orders.html",
         {
-            "request":        request,
             "employee":       employee,
             "flash":          flash,
             "orders":         orders,
@@ -374,8 +374,9 @@ async def update_order_status(
 
     couriers = await CourierService(session).get_all()
     return templates.TemplateResponse(
+        request,
         "admin/partials/order_row.html",
-        {"request": request, "order": order, "couriers": couriers, "OrderStatus": OrderStatus},
+        {"order": order, "couriers": couriers, "OrderStatus": OrderStatus},
     )
 
 
@@ -395,8 +396,9 @@ async def assign_courier(
 
     couriers = await CourierService(session).get_all()
     return templates.TemplateResponse(
+        request,
         "admin/partials/order_row.html",
-        {"request": request, "order": order, "couriers": couriers, "OrderStatus": OrderStatus},
+        {"order": order, "couriers": couriers, "OrderStatus": OrderStatus},
     )
 
 
@@ -413,8 +415,9 @@ async def clients_page(
     clients = await ClientService(session).get_all()
 
     response = templates.TemplateResponse(
+        request,
         "admin/clients.html",
-        {"request": request, "employee": employee, "flash": flash, "clients": clients},
+        {"employee": employee, "flash": flash, "clients": clients},
     )
     response.delete_cookie("flash")
     return response
@@ -433,8 +436,9 @@ async def block_client(
         return HTMLResponse("", status_code=404)
 
     return templates.TemplateResponse(
+        request,
         "admin/partials/client_row.html",
-        {"request": request, "client": client},
+        {"client": client},
     )
 
 
@@ -452,9 +456,9 @@ async def products_page(
     categories = await CategoryService(session).get_all()
 
     response = templates.TemplateResponse(
+        request,
         "admin/products.html",
         {
-            "request":    request,
             "employee":   employee,
             "flash":      flash,
             "products":   products,
@@ -558,8 +562,9 @@ async def categories_page(
     categories = await CategoryService(session).get_all()
 
     response = templates.TemplateResponse(
+        request,
         "admin/categories.html",
-        {"request": request, "employee": employee, "flash": flash, "categories": categories},
+        {"employee": employee, "flash": flash, "categories": categories},
     )
     response.delete_cookie("flash")
     return response
@@ -631,9 +636,9 @@ async def employees_page(
     positions = await PositionService(session).get_all()
 
     response = templates.TemplateResponse(
+        request,
         "admin/employees.html",
         {
-            "request":        request,
             "employee":       employee,
             "flash":          flash,
             "employees":      employees,
@@ -751,9 +756,9 @@ async def couriers_page(
     available_employees = [e for e in all_employees if e.id not in courier_emp_ids]
 
     response = templates.TemplateResponse(
+        request,
         "admin/couriers.html",
         {
-            "request":             request,
             "employee":            employee,
             "flash":               flash,
             "couriers":            couriers,
@@ -805,8 +810,9 @@ async def positions_page(
     positions = await PositionService(session).get_all()
 
     response = templates.TemplateResponse(
+        request,
         "admin/positions.html",
-        {"request": request, "employee": employee, "flash": flash, "positions": positions},
+        {"employee": employee, "flash": flash, "positions": positions},
     )
     response.delete_cookie("flash")
     return response
@@ -879,9 +885,9 @@ async def reports_page(
     export_qs = "?" + "&".join(parts) if parts else ""
 
     response = templates.TemplateResponse(
+        request,
         "admin/reports.html",
         {
-            "request":       request,
             "employee":      employee,
             "flash":         flash,
             "stats":         stats,

@@ -49,8 +49,7 @@ async def index(
     products = await ProductService(session).get_all_available()
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
-    response = templates.TemplateResponse("client/index.html", {
-        "request": request,
+    response = templates.TemplateResponse(request, "client/index.html", {
         "client": client,
         "categories": categories,
         "products": products,
@@ -81,13 +80,11 @@ async def menu(
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
     if request.headers.get("HX-Request"):
-        return templates.TemplateResponse("client/partials/product_grid.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "client/partials/product_grid.html", {
             "products": products,
         })
 
-    response = templates.TemplateResponse("client/menu.html", {
-        "request": request,
+    response = templates.TemplateResponse(request, "client/menu.html", {
         "client": client,
         "categories": categories,
         "products": products,
@@ -112,8 +109,7 @@ async def cart_page(
     items, total, cart_count = await CartService(session).get_summary(client.id)
     addresses = await AddressService(session).get_by_client(client.id)
 
-    response = templates.TemplateResponse("client/cart.html", {
-        "request": request,
+    response = templates.TemplateResponse(request, "client/cart.html", {
         "client": client,
         "items": items,
         "addresses": addresses,
@@ -146,8 +142,7 @@ async def add_cart_item(
         pass
 
     _, _, cart_count = await CartService(session).get_summary(client.id)
-    response = templates.TemplateResponse("client/partials/navbar_counter.html", {
-        "request": request,
+    response = templates.TemplateResponse(request, "client/partials/navbar_counter.html", {
         "cart_count": cart_count,
     })
     if error:
@@ -173,8 +168,7 @@ async def update_cart_item(
     items, total, _ = await CartService(session).get_summary(client.id)
     updated_item = next((i for i in items if i.id == item_id), None)
 
-    return templates.TemplateResponse("client/partials/cart_row.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "client/partials/cart_row.html", {
         "item": updated_item,
         "total": total,
         "htmx_request": True,
@@ -195,8 +189,7 @@ async def delete_cart_item(
 
     _, total, _ = await CartService(session).get_summary(client.id)
 
-    return templates.TemplateResponse("client/partials/cart_total.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "client/partials/cart_total.html", {
         "total": total,
     })
 
@@ -214,8 +207,7 @@ async def orders_page(
     orders = await OrderService(session).get_by_client(client.id)
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
-    response = templates.TemplateResponse("client/orders.html", {
-        "request": request,
+    response = templates.TemplateResponse(request, "client/orders.html", {
         "client": client,
         "orders": orders,
         "cart_count": cart_count,
@@ -265,8 +257,7 @@ async def cancel_order(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    response = templates.TemplateResponse("client/partials/order_status.html", {
-        "request": request,
+    response = templates.TemplateResponse(request, "client/partials/order_status.html", {
         "order": order,
     })
     if error:
@@ -287,8 +278,7 @@ async def profile_page(
     addresses = await AddressService(session).get_by_client(client.id)
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
-    response = templates.TemplateResponse("client/profile.html", {
-        "request": request,
+    response = templates.TemplateResponse(request, "client/profile.html", {
         "client": client,
         "addresses": addresses,
         "cart_count": cart_count,

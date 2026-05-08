@@ -31,9 +31,9 @@ async def courier_dashboard(
     ]
 
     response = templates.TemplateResponse(
+        request,
         "courier/index.html",
         {
-            "request": request,
             "employee": courier.employee,
             "courier": courier,
             "flash": flash,
@@ -61,9 +61,9 @@ async def deliver_order(
         return HTMLResponse("", status_code=404)
 
     return templates.TemplateResponse(
+        request,
         "courier/partials/order_card.html",
         {
-            "request": request,
             "order": order,
             "OrderStatus": OrderStatus,
         },
@@ -84,9 +84,9 @@ async def toggle_availability(
     )
 
     return templates.TemplateResponse(
+        request,
         "courier/partials/status_toggle.html",
         {
-            "request": request,
             "courier": updated,
         },
     )

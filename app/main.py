@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.api.v1 import routers
+from app.core.config import settings
 from app.core.exceptions import FrontendRedirect
 from app.database.database import db
 from app.frontend import admin_router, auth_router, client_router, courier_router
@@ -25,7 +26,11 @@ async def lifespan(app: FastAPI):
     await db.dispose()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -47,15 +52,15 @@ async def frontend_redirect_handler(request: Request, exc: FrontendRedirect) -> 
 
 @app.exception_handler(403)
 async def forbidden_handler(request: Request, exc: Exception) -> HTMLResponse:
-    return templates.TemplateResponse("errors/403.html", {"request": request}, status_code=403)
+    return templates.TemplateResponse(request, "errors/403.html", status_code=403)
 
 
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc: Exception) -> HTMLResponse:
-    return templates.TemplateResponse("errors/404.html", {"request": request}, status_code=404)
+    return templates.TemplateResponse(request, "errors/404.html", status_code=404)
 
 
 @app.exception_handler(Exception)
 async def server_error_handler(request: Request, exc: Exception) -> HTMLResponse:
     traceback.print_exc()
-    return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
+    return templates.TemplateResponse(request, "errors/500.html", status_code=500)

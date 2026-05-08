@@ -12,6 +12,11 @@ _DB_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 class Settings(BaseSettings):
     # -----------------------
+    #  FastAPI configuration
+    # -----------------------
+    DEBUG: bool = False
+
+    # -----------------------
     # Database configuration
     # -----------------------
     DB_HOST: str = Field(min_length=1, description="Хост базы данных")
