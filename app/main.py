@@ -1,3 +1,4 @@
+import traceback
 import asyncio
 from contextlib import asynccontextmanager
 
@@ -56,4 +57,5 @@ async def not_found_handler(request: Request, exc: Exception) -> HTMLResponse:
 
 @app.exception_handler(Exception)
 async def server_error_handler(request: Request, exc: Exception) -> HTMLResponse:
+    traceback.print_exc()
     return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
