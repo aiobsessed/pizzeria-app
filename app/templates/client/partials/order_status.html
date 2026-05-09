@@ -5,9 +5,17 @@
     "delivered":  {"label": "Доставлен", "css": "bg-green-50 text-green-700 border-green-200"},
     "canceled":   {"label": "Отменён",   "css": "bg-gray-50 text-gray-500 border-gray-200"}
 } %}
-{% set meta = STATUS_META[order.status.value] %}
+{% set meta        = STATUS_META[order.status.value] %}
+{% set is_terminal = order.status.value in ("delivered", "canceled") %}
 
-<span id="order-status-{{ order.id }}" class="inline-flex items-center gap-2">
+{#
+    .status-terminal — сигнал для HTMX-условия на outer div в orders.html.
+    Когда класс появляется в DOM, условие [!elt.querySelector('.status-terminal')] = false
+    → HTMX перестаёт делать запросы без какой-либо серверной логики.
+    CSS-класс (а не data-атрибут) выбран намеренно: нет вложенных скобок в HTMX-условии,
+    работает во всех версиях HTMX.
+#}
+<span class="inline-flex items-center gap-2{% if is_terminal %} status-terminal{% endif %}">
     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                  border {{ meta.css }}">
         {{ meta.label }}
@@ -16,7 +24,7 @@
     <button
         hx-patch="/orders/{{ order.id }}/cancel"
         hx-target="#order-status-{{ order.id }}"
-        hx-swap="outerHTML"
+        hx-swap="innerHTML"
         hx-confirm="Отменить заказ #{{ order.id }}?"
         class="text-xs text-red-400 hover:text-red-600 transition-colors underline
                underline-offset-2">

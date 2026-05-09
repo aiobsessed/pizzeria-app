@@ -59,7 +59,17 @@
                         {{ order.created_at.strftime("%d.%m.%Y в %H:%M") }}
                     </p>
                 </div>
-                {% include "client/partials/order_status.html" %}
+
+                {#
+                    Stable polling wrapper: innerHTML swap preserves this element,
+                    so the HTMX trigger stays alive across every poll cycle.
+                #}
+                <div id="order-status-{{ order.id }}"
+                     hx-get="/orders/{{ order.id }}/status"
+                     hx-trigger="every 10s"
+                     hx-swap="innerHTML">
+                    {% include "client/partials/order_status.html" %}
+                </div>
             </div>
 
             {# Order items #}

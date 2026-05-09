@@ -28,48 +28,35 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+     x-data="{ active: {{ active_category_id if active_category_id is not none else 'null' }} }">
 
     {% if products or categories %}
     <h1 class="text-2xl font-bold text-gray-900 mb-6">Меню</h1>
     {% endif %}
 
+    {# Category tabs — poll every 30s for visibility changes #}
     {% if categories %}
-    <div class="flex gap-2 flex-wrap mb-8"
-         x-data="{ active: {{ active_category_id if active_category_id is not none else 'null' }} }">
-
-        {# Кнопка «Все» #}
-        <button
-            @click="active = null"
-            hx-get="/menu"
-            hx-target="#product-grid"
-            hx-swap="innerHTML"
-            :class="active === null
-                ? 'bg-orange-500 text-white border-orange-500'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-500'"
-            class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors shadow-sm">
-            Все
-        </button>
-
-        {% for cat in categories %}
-        <button
-            @click="active = {{ cat.id }}"
-            hx-get="/menu?category_id={{ cat.id }}"
-            hx-target="#product-grid"
-            hx-swap="innerHTML"
-            :class="active === {{ cat.id }}
-                ? 'bg-orange-500 text-white border-orange-500'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-500'"
-            class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors shadow-sm">
-            {{ cat.name }}
-        </button>
-        {% endfor %}
-
+    <div id="category-tabs"
+         class="flex gap-2 flex-wrap mb-8"
+         hx-get="/menu/categories"
+         hx-trigger="every 30s"
+         hx-swap="innerHTML">
+        {% include "client/partials/category_tabs.html" %}
     </div>
     {% endif %}
 
-    {# Product grid — HTMX replaces innerHTML of this div on filter #}
-    <div id="product-grid">
+    {#
+        Product grid — poll every 30s for availability changes.
+        hx-get is set to the current filter URL on initial render.
+        Category buttons update it via $refs.grid.setAttribute on click,
+        so polling always reflects the active filter.
+    #}
+    <div id="product-grid"
+         x-ref="grid"
+         hx-get="{{ '/menu?category_id=' + active_category_id|string if active_category_id is not none else '/menu' }}"
+         hx-trigger="every 30s"
+         hx-swap="innerHTML">
         {% include "client/partials/product_grid.html" %}
     </div>
 

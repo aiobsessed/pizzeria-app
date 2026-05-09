@@ -1,0 +1,27 @@
+{% if categories %}
+<button
+    @click="active = null; $refs.grid.setAttribute('hx-get', '/menu')"
+    hx-get="/menu"
+    hx-target="#product-grid"
+    hx-swap="innerHTML"
+    :class="active === null
+        ? 'bg-orange-500 text-white border-orange-500'
+        : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-500'"
+    class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors shadow-sm">
+    Все
+</button>
+
+{% for cat in categories %}
+<button
+    @click="active = {{ cat.id }}; $refs.grid.setAttribute('hx-get', '/menu?category_id={{ cat.id }}')"
+    hx-get="/menu?category_id={{ cat.id }}"
+    hx-target="#product-grid"
+    hx-swap="innerHTML"
+    :class="active === {{ cat.id }}
+        ? 'bg-orange-500 text-white border-orange-500'
+        : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-500'"
+    class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors shadow-sm">
+    {{ cat.name }}
+</button>
+{% endfor %}
+{% endif %}
