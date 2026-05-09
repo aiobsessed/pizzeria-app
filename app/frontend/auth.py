@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.core.dependencies import flash_redirect, get_db, get_flash
 from app.core.enums import EmployeeRole
 from app.core.exceptions import AuthError, ConflictError
-from app.core.security import create_access_token
+from app.core.security import create_access_token, verify_token
 from app.schemas import ClientCreate
 from app.services import ClientService, EmployeeService
 
@@ -120,7 +120,18 @@ async def register_submit(
 
 
 @router.post("/logout")
-async def logout() -> RedirectResponse:
-    response = RedirectResponse(url="/login", status_code=302)
+async def logout(request: Request) -> RedirectResponse:
+    token = request.cookies.get("access_token")
+    redirect_url = "/login"
+
+    if token:
+        try:
+            payload = verify_token(token)
+            if payload.get("sub_type") == "employee":
+                redirect_url = "/staff/login"
+        except AuthError:
+            pass
+
+    response = RedirectResponse(url=redirect_url, status_code=302)
     response.delete_cookie("access_token")
     return response
