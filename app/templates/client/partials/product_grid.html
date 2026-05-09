@@ -1,49 +1,153 @@
 {% if products %}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    {% for product in products %}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
-                hover:shadow-md transition-shadow flex flex-col">
-        <div class="aspect-[4/3] bg-gray-100 overflow-hidden">
-            {% if product.image_url %}
-            <img src="{{ product.image_url }}"
-                 alt="{{ product.name }}"
-                 class="w-full h-full object-cover">
-            {% else %}
-            <img src="/static/img/placeholder.webp"
-                 alt="{{ product.name }}"
-                 class="w-full h-full object-cover">
-            {% endif %}
-        </div>
-        <div class="p-4 flex flex-col flex-1">
-            <h3 class="font-semibold text-gray-900 text-sm leading-tight mb-1">
-                {{ product.name }}
-            </h3>
-            {% if product.description %}
-            <p class="text-xs text-gray-500 leading-relaxed mb-2 flex-1">
-                {{ product.description | truncate(80) }}
-            </p>
-            {% else %}
-            <div class="flex-1"></div>
-            {% endif %}
-            <div class="flex items-center justify-between mt-3">
-                <div>
-                    <p class="text-base font-bold text-gray-900">{{ product.price }} ₽</p>
-                    <p class="text-xs text-gray-400">{{ product.weight }} г</p>
-                </div>
-                <button
-                    hx-post="/cart/items"
-                    hx-vals='{"product_id": {{ product.id }}, "quantity": 1}'
-                    hx-target="#cart-counter"
-                    hx-swap="outerHTML"
-                    class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
-                           text-white text-xs font-semibold rounded-xl transition-colors
-                           whitespace-nowrap">
-                    В корзину
-                </button>
+<div x-data="{ selected: null, _snap: {}, _imgUrl: '' }" @open-product.window="selected = $event.detail; _snap = $event.detail; _imgUrl = $event.detail.image_url || '/static/img/placeholder.webp'">
+
+    {# ── Product modal ────────────────────────────────────────────────────── #}
+    <div x-show="selected"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click.self="selected = null"
+         @keydown.escape.window="selected = null"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+         style="display: none;">
+
+        <div x-show="selected"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+
+            <div class="aspect-[4/3] bg-gray-100 overflow-hidden">
+                <img :src="_imgUrl"
+                     :alt="selected?.name"
+                     class="w-full h-full object-cover">
             </div>
+
+            <div class="p-6">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <h2 class="text-lg font-bold text-gray-900 leading-tight"
+                        x-text="_snap.name"></h2>
+                    <button @click="selected = null"
+                            class="text-gray-400 hover:text-gray-600 transition-colors shrink-0 mt-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="space-y-3 mb-5">
+                    <p x-show="_snap.description"
+                       x-text="_snap.description"
+                       class="text-sm text-gray-500 leading-relaxed"></p>
+                    <div x-show="_snap.composition">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Состав</p>
+                        <p x-text="_snap.composition"
+                           class="text-sm text-gray-500 leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xl font-bold text-gray-900"
+                           x-text="(_snap.price ?? '') + ' ₽'"></p>
+                        <p class="text-xs text-gray-400"
+                           x-text="(_snap.weight ?? '') + ' г'"></p>
+                    </div>
+                    <button @click="
+                                fetch('/cart/items', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                    body: 'product_id=' + _snap.id + '&quantity=1'
+                                })
+                                .then(r => r.text())
+                                .then(html => {
+                                    document.getElementById('cart-counter').outerHTML = html;
+                                    selected = null;
+                                });
+                            "
+                            class="px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                                   text-white text-sm font-semibold rounded-xl transition-colors">
+                        В корзину
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
-    {% endfor %}
+
+    {# ── Product grid ─────────────────────────────────────────────────────── #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for product in products %}
+        <div x-data='{
+                 "id":          {{ product.id }},
+                 "name":        {{ product.name | tojson }},
+                 "description": {{ (product.description or "") | tojson }},
+                 "composition": {{ (product.composition or "") | tojson }},
+                 "image_url":   {{ (product.image_url or "") | tojson }},
+                 "price":       {{ product.price }},
+                 "weight":      {{ product.weight }}
+             }'
+             @click="$dispatch('open-product', { id, name, description, composition, image_url, price, weight })"
+             class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
+                    hover:shadow-md transition-shadow flex flex-col cursor-pointer">
+
+            <div class="aspect-[4/3] bg-gray-100 overflow-hidden">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}"
+                     alt="{{ product.name }}"
+                     class="w-full h-full object-cover">
+                {% else %}
+                <img src="/static/img/placeholder.webp"
+                     alt="{{ product.name }}"
+                     class="w-full h-full object-cover">
+                {% endif %}
+            </div>
+
+            <div class="p-4 flex flex-col flex-1">
+                <h3 class="font-semibold text-gray-900 text-sm leading-tight mb-1">
+                    {{ product.name }}
+                </h3>
+                {% if product.description %}
+                <p class="text-xs text-gray-500 leading-relaxed mb-2 flex-1">
+                    {{ product.description | truncate(80) }}
+                </p>
+                {% elif product.composition %}
+                <p class="text-xs text-gray-500 leading-relaxed mb-2 flex-1">
+                    {{ product.composition | truncate(80) }}
+                </p>
+                {% else %}
+                <div class="flex-1"></div>
+                {% endif %}
+                <div class="flex items-center justify-between mt-3">
+                    <div>
+                        <p class="text-base font-bold text-gray-900">{{ product.price }} ₽</p>
+                        <p class="text-xs text-gray-400">{{ product.weight }} г</p>
+                    </div>
+                    <button
+                        @click.stop
+                        hx-post="/cart/items"
+                        hx-vals='{"product_id": {{ product.id }}, "quantity": 1}'
+                        hx-target="#cart-counter"
+                        hx-swap="outerHTML"
+                        class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                               text-white text-xs font-semibold rounded-xl transition-colors
+                               whitespace-nowrap">
+                        В корзину
+                    </button>
+                </div>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
 </div>
 {% else %}
 <div class="text-center py-16 text-gray-400">
