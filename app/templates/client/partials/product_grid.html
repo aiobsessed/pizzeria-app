@@ -1,5 +1,6 @@
 {% if products %}
-<div x-data="{ selected: null, _snap: {}, _imgUrl: '' }" @open-product.window="selected = $event.detail; _snap = $event.detail; _imgUrl = $event.detail.image_url || '/static/img/placeholder.webp'">
+<div x-data="{ selected: null, _snap: {}, _imgUrl: '', qty: 1 }"
+     @open-product.window="selected = $event.detail; _snap = $event.detail; _imgUrl = $event.detail.image_url || '/static/img/placeholder.webp'; qty = 1">
 
     {# ── Product modal ────────────────────────────────────────────────────── #}
     <div x-show="selected"
@@ -53,29 +54,56 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <div>
+                <div class="flex items-center justify-between gap-4">
+                    <div class="shrink-0">
                         <p class="text-xl font-bold text-gray-900"
                            x-text="(_snap.price ?? '') + ' ₽'"></p>
                         <p class="text-xs text-gray-400"
                            x-text="(_snap.weight ?? '') + ' г'"></p>
                     </div>
-                    <button @click="
-                                fetch('/cart/items', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                    body: 'product_id=' + _snap.id + '&quantity=1'
-                                })
-                                .then(r => r.text())
-                                .then(html => {
-                                    document.getElementById('cart-counter').outerHTML = html;
-                                    selected = null;
-                                });
-                            "
-                            class="px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
-                                   text-white text-sm font-semibold rounded-xl transition-colors">
-                        В корзину
-                    </button>
+
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center rounded-xl border border-gray-200 overflow-hidden">
+                            <button @click="qty = Math.max(1, qty - 1)"
+                                    class="w-9 h-9 flex items-center justify-center text-gray-500
+                                           hover:bg-gray-50 transition-colors text-lg select-none">−</button>
+                            <span x-text="qty"
+                                  class="w-8 text-center text-sm font-bold text-gray-800 select-none tabular-nums"></span>
+                            <button @click="qty = Math.min(99, qty + 1)"
+                                    class="w-9 h-9 flex items-center justify-center text-gray-500
+                                           hover:bg-gray-50 transition-colors text-lg select-none">+</button>
+                        </div>
+
+                        <button @click="
+                                    fetch('/cart/items', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                        body: 'product_id=' + _snap.id + '&quantity=' + qty
+                                    })
+                                    .then(async r => {
+                                        const html = await r.text();
+                                        const triggerHeader = r.headers.get('HX-Trigger');
+                                        let isSuccess = true;
+                                        if (triggerHeader) {
+                                            const triggers = JSON.parse(triggerHeader);
+                                            if (triggers.showflash) {
+                                                isSuccess = triggers.showflash.success === true;
+                                                document.dispatchEvent(new CustomEvent('showflash', {
+                                                    detail: triggers.showflash,
+                                                    bubbles: true,
+                                                }));
+                                            }
+                                        }
+                                        const counter = document.getElementById('cart-counter');
+                                        if (counter) counter.outerHTML = html;
+                                        if (isSuccess) { selected = null; qty = 1; }
+                                    });
+                                "
+                                class="px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                                       text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
+                            В корзину
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -92,7 +120,8 @@
                  "composition": {{ (product.composition or "") | tojson }},
                  "image_url":   {{ (product.image_url or "") | tojson }},
                  "price":       {{ product.price }},
-                 "weight":      {{ product.weight }}
+                 "weight":      {{ product.weight }},
+                 "qty":         1
              }'
              @click="$dispatch('open-product', { id, name, description, composition, image_url, price, weight })"
              class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
@@ -125,22 +154,33 @@
                 {% else %}
                 <div class="flex-1"></div>
                 {% endif %}
-                <div class="flex items-center justify-between mt-3">
+
+                <div class="mt-3 space-y-2">
                     <div>
                         <p class="text-base font-bold text-gray-900">{{ product.price }} ₽</p>
                         <p class="text-xs text-gray-400">{{ product.weight }} г</p>
                     </div>
-                    <button
-                        @click.stop
-                        hx-post="/cart/items"
-                        hx-vals='{"product_id": {{ product.id }}, "quantity": 1}'
-                        hx-target="#cart-counter"
-                        hx-swap="outerHTML"
-                        class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
-                               text-white text-xs font-semibold rounded-xl transition-colors
-                               whitespace-nowrap">
-                        В корзину
-                    </button>
+                    <div class="flex items-center gap-2" @click.stop>
+                        <div class="flex items-center rounded-lg border border-gray-200 overflow-hidden shrink-0">
+                            <button @click="qty = Math.max(1, qty - 1)"
+                                    class="w-7 h-7 flex items-center justify-center text-gray-500
+                                           hover:bg-gray-50 transition-colors select-none">−</button>
+                            <span x-text="qty"
+                                  class="w-7 text-center text-xs font-bold text-gray-800 select-none tabular-nums"></span>
+                            <button @click="qty = Math.min(99, qty + 1)"
+                                    class="w-7 h-7 flex items-center justify-center text-gray-500
+                                           hover:bg-gray-50 transition-colors select-none">+</button>
+                        </div>
+                        <button
+                            :hx-vals='JSON.stringify({ product_id: id, quantity: qty })'
+                            hx-post="/cart/items"
+                            hx-target="#cart-counter"
+                            hx-swap="outerHTML"
+                            class="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                                   text-white text-xs font-semibold rounded-xl transition-colors">
+                            В корзину
+                        </button>
+                    </div>
                 </div>
             </div>
 

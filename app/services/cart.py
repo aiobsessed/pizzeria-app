@@ -34,14 +34,21 @@ class CartService:
     # -----------------------
     # Client methods
     # -----------------------
+
     async def add_item(self, client_id: int, data: CartItemCreate) -> CartItem:
         product = await self.product_repo.get_by_id(data.product_id)
         if product is None:
             raise NotFoundError("Product not found")
-        elif not product.is_available:
-            raise BusinessError(f"Product {product.name} is not available")
+        if not product.is_available:
+            raise BusinessError(f"«{product.name}» недоступен для заказа")
 
         cart = await self.get_by_client(client_id)
+        existing = await self.cart_item_repo.get_by_cart_and_product(cart.id, data.product_id)
+        if existing is not None:
+            return await self.update_item(
+                client_id, existing.id, CartItemUpdate(quantity=existing.quantity + data.quantity)
+            )
+
         new_item = CartItem(cart_id=cart.id, **data.model_dump())
         return await self.cart_item_repo.create(new_item)
 

@@ -15,6 +15,15 @@ class CartItemRepository(BaseRepository[CartItem]):
             entity=CartItem, ident=item_id, options=[joinedload(CartItem.cart)]
         )
 
+    async def get_by_cart_and_product(self, cart_id: int, product_id: int) -> CartItem | None:
+        result = await self.session.execute(
+            select(CartItem).where(
+                CartItem.cart_id == cart_id,
+                CartItem.product_id == product_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def get_by_cart(self, cart_id: int) -> list[CartItem]:
         result = await self.session.execute(
             select(CartItem)

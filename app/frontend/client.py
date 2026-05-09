@@ -14,14 +14,7 @@ from app.core.dependencies import (
 from app.core.enums import DeliveryType, PaymentMethod
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
 from app.models import Client
-from app.schemas import (
-    AddressCreate,
-    AddressUpdate,
-    CartItemCreate,
-    CartItemUpdate,
-    ClientUpdate,
-    OrderCreate,
-)
+from app.schemas import AddressCreate, AddressUpdate, CartItemCreate, CartItemUpdate, ClientUpdate, OrderCreate
 from app.services import (
     AddressService,
     CartService,
@@ -56,17 +49,13 @@ async def index(
     products = await ProductService(session).get_all_available()
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
-    response = templates.TemplateResponse(
-        request,
-        "client/index.html",
-        {
-            "client": client,
-            "categories": categories,
-            "products": products,
-            "cart_count": cart_count,
-            "flash": flash,
-        },
-    )
+    response = templates.TemplateResponse(request, "client/index.html", {
+        "client": client,
+        "categories": categories,
+        "products": products,
+        "cart_count": cart_count,
+        "flash": flash,
+    })
     response.delete_cookie("flash")
     return response
 
@@ -91,26 +80,18 @@ async def menu(
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
     if request.headers.get("HX-Request"):
-        return templates.TemplateResponse(
-            request,
-            "client/partials/product_grid.html",
-            {
-                "products": products,
-            },
-        )
-
-    response = templates.TemplateResponse(
-        request,
-        "client/menu.html",
-        {
-            "client": client,
-            "categories": categories,
+        return templates.TemplateResponse(request, "client/partials/product_grid.html", {
             "products": products,
-            "active_category_id": category_id,
-            "cart_count": cart_count,
-            "flash": flash,
-        },
-    )
+        })
+
+    response = templates.TemplateResponse(request, "client/menu.html", {
+        "client": client,
+        "categories": categories,
+        "products": products,
+        "active_category_id": category_id,
+        "cart_count": cart_count,
+        "flash": flash,
+    })
     response.delete_cookie("flash")
     return response
 
@@ -128,20 +109,16 @@ async def cart_page(
     items, total, cart_count = await CartService(session).get_summary(client.id)
     addresses = await AddressService(session).get_by_client(client.id)
 
-    response = templates.TemplateResponse(
-        request,
-        "client/cart.html",
-        {
-            "client": client,
-            "items": items,
-            "addresses": addresses,
-            "total": total,
-            "cart_count": cart_count,
-            "DeliveryType": DeliveryType,
-            "PaymentMethod": PaymentMethod,
-            "flash": flash,
-        },
-    )
+    response = templates.TemplateResponse(request, "client/cart.html", {
+        "client": client,
+        "items": items,
+        "addresses": addresses,
+        "total": total,
+        "cart_count": cart_count,
+        "DeliveryType": DeliveryType,
+        "PaymentMethod": PaymentMethod,
+        "flash": flash,
+    })
     response.delete_cookie("flash")
     return response
 
@@ -154,26 +131,27 @@ async def add_cart_item(
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    error: str | None = None
+    message: str | None = None
+    success = False
     try:
         await CartService(session).add_item(
             client.id, CartItemCreate(product_id=product_id, quantity=quantity)
         )
+        message = "Товар добавлен в корзину"
+        success = True
+    except ConflictError as e:
+        message = str(e)
     except BusinessError as e:
-        error = str(e)
+        message = str(e)
     except NotFoundError:
         pass
 
     _, _, cart_count = await CartService(session).get_summary(client.id)
-    response = templates.TemplateResponse(
-        request,
-        "client/partials/navbar_counter.html",
-        {
-            "cart_count": cart_count,
-        },
-    )
-    if error:
-        _htmx_flash(response, error)
+    response = templates.TemplateResponse(request, "client/partials/navbar_counter.html", {
+        "cart_count": cart_count,
+    })
+    if message:
+        _htmx_flash(response, message, success=success)
     return response
 
 
@@ -195,15 +173,11 @@ async def update_cart_item(
     items, total, _ = await CartService(session).get_summary(client.id)
     updated_item = next((i for i in items if i.id == item_id), None)
 
-    return templates.TemplateResponse(
-        request,
-        "client/partials/cart_row.html",
-        {
-            "item": updated_item,
-            "total": total,
-            "htmx_request": True,
-        },
-    )
+    return templates.TemplateResponse(request, "client/partials/cart_row.html", {
+        "item": updated_item,
+        "total": total,
+        "htmx_request": True,
+    })
 
 
 @router.delete("/cart/items/{item_id}", response_class=HTMLResponse)
@@ -220,13 +194,9 @@ async def delete_cart_item(
 
     _, total, _ = await CartService(session).get_summary(client.id)
 
-    return templates.TemplateResponse(
-        request,
-        "client/partials/cart_total.html",
-        {
-            "total": total,
-        },
-    )
+    return templates.TemplateResponse(request, "client/partials/cart_total.html", {
+        "total": total,
+    })
 
 
 # ── Заказы ────────────────────────────────────────────────────────────────────
@@ -242,16 +212,12 @@ async def orders_page(
     orders = await OrderService(session).get_by_client(client.id)
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
-    response = templates.TemplateResponse(
-        request,
-        "client/orders.html",
-        {
-            "client": client,
-            "orders": orders,
-            "cart_count": cart_count,
-            "flash": flash,
-        },
-    )
+    response = templates.TemplateResponse(request, "client/orders.html", {
+        "client": client,
+        "orders": orders,
+        "cart_count": cart_count,
+        "flash": flash,
+    })
     response.delete_cookie("flash")
     return response
 
@@ -296,13 +262,9 @@ async def cancel_order(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    response = templates.TemplateResponse(
-        request,
-        "client/partials/order_status.html",
-        {
-            "order": order,
-        },
-    )
+    response = templates.TemplateResponse(request, "client/partials/order_status.html", {
+        "order": order,
+    })
     if error:
         _htmx_flash(response, error)
     return response
@@ -321,16 +283,12 @@ async def profile_page(
     addresses = await AddressService(session).get_by_client(client.id)
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
-    response = templates.TemplateResponse(
-        request,
-        "client/profile.html",
-        {
-            "client": client,
-            "addresses": addresses,
-            "cart_count": cart_count,
-            "flash": flash,
-        },
-    )
+    response = templates.TemplateResponse(request, "client/profile.html", {
+        "client": client,
+        "addresses": addresses,
+        "cart_count": cart_count,
+        "flash": flash,
+    })
     response.delete_cookie("flash")
     return response
 
@@ -419,13 +377,9 @@ async def update_address(
         except NotFoundError:
             return HTMLResponse("", status_code=404)
 
-    response = templates.TemplateResponse(
-        request,
-        "client/partials/address_card.html",
-        {
-            "addr": addr,
-        },
-    )
+    response = templates.TemplateResponse(request, "client/partials/address_card.html", {
+        "addr": addr,
+    })
     _htmx_flash(response, error if error else "Адрес успешно обновлён", success=not error)
     return response
 
