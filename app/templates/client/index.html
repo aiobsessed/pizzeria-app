@@ -61,8 +61,15 @@
 {% endif %}
 
 {# All products #}
+{% if products %}
 <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
     <h2 class="text-lg font-bold text-gray-900 mb-5">Все позиции</h2>
     {% include "client/partials/product_grid.html" %}
 </section>
+{% else %}
+<div class="flex flex-col items-center justify-center py-24 text-gray-400">
+    <p class="text-5xl mb-4">🍕</p>
+    <p class="text-sm">Меню пока формируется — скоро здесь появятся вкусные позиции</p>
+</div>
+{% endif %}
 {% endblock %}

@@ -190,8 +190,14 @@
 
 </div>
 {% else %}
-<div class="text-center py-16 text-gray-400">
-    <p class="text-4xl mb-3">🍕</p>
-    <p class="text-sm">В этой категории пока нет товаров</p>
+<div class="flex flex-col items-center justify-center py-24 text-gray-400">
+    <p class="text-5xl mb-4">🍕</p>
+    <p class="text-sm">
+        {%- if active_category_id is not none %}
+            В этой категории пока нет товаров
+        {%- else %}
+            В меню пока нет доступных товаров
+        {%- endif %}
+    </p>
 </div>
 {% endif %}

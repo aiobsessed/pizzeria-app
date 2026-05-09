@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .base import BaseRepository
-from app.models import Product
+from app.models import Category, Product
 
 
 class ProductRepository(BaseRepository[Product]):
@@ -26,7 +26,12 @@ class ProductRepository(BaseRepository[Product]):
         return result.scalars().all()
 
     async def get_all_available(self) -> list[Product]:
-        result = await self.session.execute(select(Product).where(Product.is_available))
+        query = (
+            select(Product)
+            .join(Category, Product.category_id == Category.id)
+            .where(Product.is_available, Category.is_active)
+        )
+        result = await self.session.execute(query)
         return result.scalars().all()
 
     async def get_by_name(self, name: str) -> Product | None:
@@ -34,13 +39,19 @@ class ProductRepository(BaseRepository[Product]):
         return result.scalar_one_or_none()
 
     async def get_available_by_category(self, category_id: int) -> list[Product]:
-        result = await self.session.execute(
-            select(Product).where(Product.category_id == category_id, Product.is_available)
+        query = (
+            select(Product)
+            .join(Category, Product.category_id == Category.id)
+            .where(Product.category_id == category_id, Product.is_available, Category.is_active)
         )
+        result = await self.session.execute(query)
         return result.scalars().all()
 
     async def get_available_by_id(self, product_id: int) -> Product | None:
-        result = await self.session.execute(
-            select(Product).where(Product.id == product_id, Product.is_available)
+        query = (
+            select(Product)
+            .join(Category, Product.category_id == Category.id)
+            .where(Product.id == product_id, Product.is_available, Category.is_active)
         )
+        result = await self.session.execute(query)
         return result.scalar_one_or_none()
