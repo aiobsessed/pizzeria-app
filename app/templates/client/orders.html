@@ -61,12 +61,16 @@
                 </div>
 
                 {#
-                    Stable polling wrapper: innerHTML swap preserves this element,
-                    so the HTMX trigger stays alive across every poll cycle.
+                    Dual-interval polling:
+                    • Active orders  → every 2s  (fast, real-time feel)
+                    • Terminal orders → every 15s (rare admin overrides still propagate)
+                    Both triggers use opposing conditions on .status-terminal so exactly
+                    one fires at a time, with no server-side coordination needed.
                 #}
                 <div id="order-status-{{ order.id }}"
                      hx-get="/orders/{{ order.id }}/status"
-                     hx-trigger="every 10s"
+                     hx-trigger="every 2s [!this.querySelector('.status-terminal')],
+                                 every 15s [!!this.querySelector('.status-terminal')]"
                      hx-swap="innerHTML">
                     {% include "client/partials/order_status.html" %}
                 </div>

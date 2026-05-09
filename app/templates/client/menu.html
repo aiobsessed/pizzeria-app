@@ -29,33 +29,35 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
-     x-data="{ active: {{ active_category_id if active_category_id is not none else 'null' }} }">
+     x-data="{ active: {{ active_category_id if active_category_id is not none else 'null' }} }"
+     @categoryreset.window="active = null; $refs.grid.setAttribute('hx-get', '/menu')">
 
     {% if products or categories %}
     <h1 class="text-2xl font-bold text-gray-900 mb-6">Меню</h1>
     {% endif %}
 
-    {# Category tabs — poll every 30s for visibility changes #}
+    {# Category tabs — poll every 5s for visibility changes #}
     {% if categories %}
     <div id="category-tabs"
          class="flex gap-2 flex-wrap mb-8"
          hx-get="/menu/categories"
-         hx-trigger="every 30s"
+         hx-trigger="every 5s"
          hx-swap="innerHTML">
         {% include "client/partials/category_tabs.html" %}
     </div>
     {% endif %}
 
     {#
-        Product grid — poll every 30s for availability changes.
+        Product grid — poll every 5s for availability and category-visibility changes.
         hx-get is set to the current filter URL on initial render.
-        Category buttons update it via $refs.grid.setAttribute on click,
-        so polling always reflects the active filter.
+        Category buttons update it via $refs.grid.setAttribute on click.
+        Server emits categoryReset when the active category becomes hidden,
+        which the parent x-data handler catches to reset both Alpine state and hx-get.
     #}
     <div id="product-grid"
          x-ref="grid"
          hx-get="{{ '/menu?category_id=' + active_category_id|string if active_category_id is not none else '/menu' }}"
-         hx-trigger="every 30s"
+         hx-trigger="every 5s"
          hx-swap="innerHTML">
         {% include "client/partials/product_grid.html" %}
     </div>

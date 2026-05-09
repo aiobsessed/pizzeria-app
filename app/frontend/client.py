@@ -82,16 +82,24 @@ async def menu(
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
+    product_service = ProductService(session)
     categories = await CategoryService(session).get_all_active()
+
+    # If the polled category is no longer active, silently fall back to all products
+    # and signal the client to reset its Alpine state via HX-Trigger.
+    category_reset = category_id is not None and category_id not in {c.id for c in categories}
+    if category_reset:
+        category_id = None
+
     products = (
-        await ProductService(session).get_available_by_category(category_id)
+        await product_service.get_available_by_category(category_id)
         if category_id is not None
-        else await ProductService(session).get_all_available()
+        else await product_service.get_all_available()
     )
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
     if request.headers.get("HX-Request"):
-        return templates.TemplateResponse(
+        response = templates.TemplateResponse(
             request,
             "client/partials/product_grid.html",
             {
@@ -99,6 +107,9 @@ async def menu(
                 "active_category_id": category_id,
             },
         )
+        if category_reset:
+            response.headers["HX-Trigger"] = json.dumps({"categoryReset": True})
+        return response
 
     response = templates.TemplateResponse(
         request,
