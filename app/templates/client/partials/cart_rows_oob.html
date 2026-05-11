@@ -1,0 +1,14 @@
+{# OOB-обновление всех строк корзины + итого + кнопки оформления. Возвращается /cart/status (поллинг). #}
+<table>
+    <tbody id="cart-body" hx-swap-oob="innerHTML">
+        {% for item in items %}
+        {% include "client/partials/cart_row.html" %}
+        {% endfor %}
+    </tbody>
+</table>
+<div id="cart-total" hx-swap-oob="true"
+     class="flex items-center justify-between pt-4 border-t border-gray-100">
+    <span class="text-sm text-gray-500">Итого</span>
+    <span class="text-xl font-bold text-gray-900 tabular-nums">{{ total | round(2) }} ₽</span>
+</div>
+{% include "client/partials/cart_submit_oob.html" %}

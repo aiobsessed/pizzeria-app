@@ -183,13 +183,15 @@ async def cart_status_partial(
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    """Polling endpoint: возвращает OOB-обновление кнопки оформления заказа."""
-    items, _, _ = await CartService(session).get_summary(client.id)
+    """Polling endpoint: OOB-обновление строк корзины, итога и кнопки оформления."""
+    items, total, _ = await CartService(session).get_summary(client.id)
     unavailable_names = _cart_unavailable_names(items)
     return templates.TemplateResponse(
         request,
-        "client/partials/cart_submit_oob.html",
+        "client/partials/cart_rows_oob.html",
         {
+            "items": items,
+            "total": total,
             "has_unavailable": bool(unavailable_names),
             "unavailable_names": unavailable_names,
         },

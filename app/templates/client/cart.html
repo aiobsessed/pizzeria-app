@@ -74,7 +74,7 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                             <th class="py-3 pl-2 pr-4"></th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="cart-body">
                         {% for item in items %}
                         {% include "client/partials/cart_row.html" %}
                         {% endfor %}
