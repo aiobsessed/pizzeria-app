@@ -13,7 +13,7 @@ from app.core.dependencies import (
 )
 from app.core.enums import DeliveryType, PaymentMethod
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
-from app.models import Client
+from app.models import Client, CartItem
 from app.schemas import (
     AddressCreate,
     AddressUpdate,
@@ -42,6 +42,14 @@ def _htmx_flash(response: HTMLResponse, message: str, success: bool = False) -> 
     return response
 
 
+def _cart_unavailable_names(items: list[CartItem]) -> list[str]:
+    return [
+        item.product.name
+        for item in items
+        if not item.product.is_available or not item.product.category.is_active
+    ]
+
+
 # ── Главная страница ──────────────────────────────────────────────────────────
 
 
@@ -55,6 +63,16 @@ async def index(
     categories = await CategoryService(session).get_all_active()
     products = await ProductService(session).get_all_available()
     _, _, cart_count = await CartService(session).get_summary(client.id)
+
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(
+            request,
+            "client/partials/index_htmx.html",
+            {
+                "categories": categories,
+                "products": products,
+            },
+        )
 
     response = templates.TemplateResponse(
         request,
@@ -82,28 +100,28 @@ async def menu(
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    product_service = ProductService(session)
     categories = await CategoryService(session).get_all_active()
 
-    # If the polled category is no longer active, silently fall back to all products
-    # and signal the client to reset its Alpine state via HX-Trigger.
+    # Если выбранная категория стала скрытой — сбрасываем фильтр и сигнализируем клиенту.
     category_reset = category_id is not None and category_id not in {c.id for c in categories}
     if category_reset:
         category_id = None
 
     products = (
-        await product_service.get_available_by_category(category_id)
+        await ProductService(session).get_available_by_category(category_id)
         if category_id is not None
-        else await product_service.get_all_available()
+        else await ProductService(session).get_all_available()
     )
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
     if request.headers.get("HX-Request"):
+        # Один ответ обновляет и сетку товаров, и вкладки категорий (через OOB).
         response = templates.TemplateResponse(
             request,
-            "client/partials/product_grid.html",
+            "client/partials/menu_htmx.html",
             {
                 "products": products,
+                "categories": categories,
                 "active_category_id": category_id,
             },
         )
@@ -127,22 +145,6 @@ async def menu(
     return response
 
 
-@router.get("/menu/categories", response_class=HTMLResponse)
-async def menu_categories_partial(
-    request: Request,
-    client: Client = Depends(require_client_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> HTMLResponse:
-    categories = await CategoryService(session).get_all_active()
-    return templates.TemplateResponse(
-        request,
-        "client/partials/category_tabs.html",
-        {
-            "categories": categories,
-        },
-    )
-
-
 # ── Корзина ───────────────────────────────────────────────────────────────────
 
 
@@ -155,6 +157,7 @@ async def cart_page(
 ) -> HTMLResponse:
     items, total, cart_count = await CartService(session).get_summary(client.id)
     addresses = await AddressService(session).get_by_client(client.id)
+    unavailable_names = _cart_unavailable_names(items)
 
     response = templates.TemplateResponse(
         request,
@@ -165,13 +168,32 @@ async def cart_page(
             "addresses": addresses,
             "total": total,
             "cart_count": cart_count,
-            "DeliveryType": DeliveryType,
-            "PaymentMethod": PaymentMethod,
+            "has_unavailable": bool(unavailable_names),
+            "unavailable_names": unavailable_names,
             "flash": flash,
         },
     )
     response.delete_cookie("flash")
     return response
+
+
+@router.get("/cart/status", response_class=HTMLResponse)
+async def cart_status_partial(
+    request: Request,
+    client: Client = Depends(require_client_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    """Polling endpoint: возвращает OOB-обновление кнопки оформления заказа."""
+    items, _, _ = await CartService(session).get_summary(client.id)
+    unavailable_names = _cart_unavailable_names(items)
+    return templates.TemplateResponse(
+        request,
+        "client/partials/cart_submit_oob.html",
+        {
+            "has_unavailable": bool(unavailable_names),
+            "unavailable_names": unavailable_names,
+        },
+    )
 
 
 @router.post("/cart/items", response_class=HTMLResponse)
@@ -201,9 +223,7 @@ async def add_cart_item(
     response = templates.TemplateResponse(
         request,
         "client/partials/navbar_counter.html",
-        {
-            "cart_count": cart_count,
-        },
+        {"cart_count": cart_count},
     )
     if message:
         _htmx_flash(response, message, success=success)
@@ -227,6 +247,7 @@ async def update_cart_item(
 
     items, total, _ = await CartService(session).get_summary(client.id)
     updated_item = next((i for i in items if i.id == item_id), None)
+    unavailable_names = _cart_unavailable_names(items)
 
     return templates.TemplateResponse(
         request,
@@ -235,6 +256,8 @@ async def update_cart_item(
             "item": updated_item,
             "total": total,
             "htmx_request": True,
+            "has_unavailable": bool(unavailable_names),
+            "unavailable_names": unavailable_names,
         },
     )
 
@@ -251,13 +274,16 @@ async def delete_cart_item(
     except NotFoundError:
         pass
 
-    _, total, _ = await CartService(session).get_summary(client.id)
+    items, total, _ = await CartService(session).get_summary(client.id)
+    unavailable_names = _cart_unavailable_names(items)
 
     return templates.TemplateResponse(
         request,
         "client/partials/cart_total.html",
         {
             "total": total,
+            "has_unavailable": bool(unavailable_names),
+            "unavailable_names": unavailable_names,
         },
     )
 
@@ -348,9 +374,7 @@ async def cancel_order(
     response = templates.TemplateResponse(
         request,
         "client/partials/order_status.html",
-        {
-            "order": order,
-        },
+        {"order": order},
     )
     if error:
         _htmx_flash(response, error)
@@ -471,9 +495,7 @@ async def update_address(
     response = templates.TemplateResponse(
         request,
         "client/partials/address_card.html",
-        {
-            "addr": addr,
-        },
+        {"addr": addr},
     )
     _htmx_flash(response, error if error else "Адрес успешно обновлён", success=not error)
     return response

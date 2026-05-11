@@ -51,6 +51,12 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
     </div>
     {% else %}
 
+    {# Polling: каждые 5 сек проверяем доступность товаров, OOB обновляет #cart-submit #}
+    <div hx-get="/cart/status"
+         hx-trigger="every 5s"
+         hx-swap="none"
+         aria-hidden="true"></div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {# Cart items table #}
@@ -148,11 +154,10 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                         </select>
                     </div>
 
-                    <button type="submit"
-                            class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
-                                   text-white text-sm font-semibold rounded-xl transition-colors mt-2">
-                        Оформить заказ
-                    </button>
+                    <div id="cart-submit">
+                        {% include "client/partials/cart_submit.html" %}
+                    </div>
+
                 </form>
             </div>
         </div>

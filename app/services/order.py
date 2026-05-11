@@ -110,17 +110,18 @@ class OrderService:
         total_price = Decimal(0)
 
         for cart_item in cart_items:
-            if not cart_item.product.is_available:
-                raise BusinessError(f"Product '{cart_item.product.name}' is not available")
+            product = cart_item.product
+            if not product.is_available or not product.category.is_active:
+                raise BusinessError(f"«{product.name}» недоступен для заказа")
 
             order_items.append(
                 OrderItem(
                     product_id=cart_item.product_id,
                     quantity=cart_item.quantity,
-                    price_at_order=cart_item.product.price,
+                    price_at_order=product.price,
                 )
             )
-            total_price += cart_item.product.price * cart_item.quantity
+            total_price += product.price * cart_item.quantity
 
         order = await self.order_repo.create(
             Order(client_id=client_id, total_price=total_price, **data.model_dump())

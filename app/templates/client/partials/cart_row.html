@@ -1,5 +1,7 @@
+{% set is_unavailable = not item.product.is_available or not item.product.category.is_active %}
 <tr id="cart-item-{{ item.id }}"
-    class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+    class="border-b border-gray-100 last:border-0 transition-colors
+           {{ 'bg-red-50 opacity-60' if is_unavailable else 'hover:bg-gray-50' }}">
     <td class="py-4 pl-4 pr-2">
         <div class="flex items-center gap-3">
             <div class="w-14 h-14 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
@@ -16,6 +18,9 @@
             <div>
                 <p class="text-sm font-medium text-gray-900">{{ item.product.name }}</p>
                 <p class="text-xs text-gray-400">{{ item.product.weight }} г · {{ item.product.price }} ₽/шт</p>
+                {% if is_unavailable %}
+                <p class="text-xs text-red-500 font-medium mt-0.5">Недоступен</p>
+                {% endif %}
             </div>
         </div>
     </td>
@@ -33,7 +38,8 @@
                class="w-16 px-2 py-1.5 text-sm text-center border border-gray-200 rounded-lg
                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent">
     </td>
-    <td class="py-4 px-2 text-right text-sm font-semibold text-gray-900 tabular-nums whitespace-nowrap">
+    <td class="py-4 px-2 text-right text-sm font-semibold tabular-nums whitespace-nowrap
+               {{ 'text-gray-400' if is_unavailable else 'text-gray-900' }}">
         {{ (item.quantity * item.product.price) | round(2) }} ₽
     </td>
     <td class="py-4 pl-2 pr-4">
@@ -51,11 +57,11 @@
         </button>
     </td>
 </tr>
-{# OOB-обновление итого — рендерится ТОЛЬКО в HTMX-ответе, не при SSR #}
 {% if htmx_request is defined and htmx_request %}
 <div id="cart-total" hx-swap-oob="true"
      class="flex items-center justify-between pt-4 border-t border-gray-100">
     <span class="text-sm text-gray-500">Итого</span>
     <span class="text-xl font-bold text-gray-900 tabular-nums">{{ total | round(2) }} ₽</span>
 </div>
+{% include "client/partials/cart_submit_oob.html" %}
 {% endif %}

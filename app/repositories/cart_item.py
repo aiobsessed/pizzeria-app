@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import CartItem
+from app.models.product import Product
 from .base import BaseRepository
 
 
@@ -27,7 +28,7 @@ class CartItemRepository(BaseRepository[CartItem]):
     async def get_by_cart(self, cart_id: int) -> list[CartItem]:
         result = await self.session.execute(
             select(CartItem)
-            .options(selectinload(CartItem.product))
+            .options(selectinload(CartItem.product).selectinload(Product.category))
             .where(CartItem.cart_id == cart_id)
         )
         return result.scalars().all()

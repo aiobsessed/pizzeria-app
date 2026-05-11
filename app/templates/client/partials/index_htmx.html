@@ -1,0 +1,27 @@
+{% if categories %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <h2 class="text-lg font-bold text-gray-900 mb-5">Категории</h2>
+    <div class="flex gap-3 flex-wrap">
+        {% for cat in categories %}
+        <a href="/menu?category_id={{ cat.id }}"
+           class="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium
+                  text-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors
+                  shadow-sm">
+            {{ cat.name }}
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if products %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <h2 class="text-lg font-bold text-gray-900 mb-5">Все позиции</h2>
+    {% include "client/partials/product_grid.html" %}
+</section>
+{% else %}
+<div class="flex flex-col items-center justify-center py-24 text-gray-400">
+    <p class="text-5xl mb-4">🍕</p>
+    <p class="text-sm">Меню пока формируется — скоро здесь появятся вкусные позиции</p>
+</div>
+{% endif %}

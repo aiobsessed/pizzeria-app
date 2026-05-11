@@ -1,0 +1,10 @@
+{% include "client/partials/product_grid.html" %}
+
+{#
+    OOB: HTMX заменит #category-tabs в DOM на этот элемент (outerHTML).
+    hx-swap-oob="true" — единственный валидный синтаксис для свапа по id.
+    hx-swap-oob="innerHTML" не является корректным значением в HTMX.
+#}
+<div id="category-tabs" hx-swap-oob="true" class="flex gap-2 flex-wrap mb-8">
+    {% include "client/partials/category_tabs.html" %}
+</div>

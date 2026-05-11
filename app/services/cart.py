@@ -36,11 +36,10 @@ class CartService:
     # -----------------------
 
     async def add_item(self, client_id: int, data: CartItemCreate) -> CartItem:
-        product = await self.product_repo.get_by_id(data.product_id)
+        # get_available_by_id проверяет и product.is_available, и category.is_active
+        product = await self.product_repo.get_available_by_id(data.product_id)
         if product is None:
-            raise NotFoundError("Product not found")
-        if not product.is_available:
-            raise BusinessError(f"«{product.name}» недоступен для заказа")
+            raise BusinessError("Товар недоступен для заказа")
 
         cart = await self.get_by_client(client_id)
         existing = await self.cart_item_repo.get_by_cart_and_product(cart.id, data.product_id)

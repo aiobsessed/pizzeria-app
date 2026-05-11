@@ -1,0 +1,4 @@
+{# Возвращается как OOB-обновление: из /cart/status (polling) и из cart_row/cart_total при HTMX-запросах. #}
+<div id="cart-submit" hx-swap-oob="true">
+    {% include "client/partials/cart_submit.html" %}
+</div>

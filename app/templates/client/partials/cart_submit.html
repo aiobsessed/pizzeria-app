@@ -1,0 +1,17 @@
+{% if has_unavailable %}
+<p class="text-xs text-red-500 mb-3 leading-relaxed">
+    Нельзя оформить заказ — некоторые товары стали недоступны:
+    <span class="font-medium">{{ unavailable_names | join(", ") }}</span>.
+</p>
+<button type="button" disabled
+        class="w-full py-2.5 bg-gray-200 text-gray-400 text-sm font-semibold
+               rounded-xl cursor-not-allowed mt-2">
+    Оформить заказ
+</button>
+{% else %}
+<button type="submit"
+        class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+               text-white text-sm font-semibold rounded-xl transition-colors mt-2">
+    Оформить заказ
+</button>
+{% endif %}
