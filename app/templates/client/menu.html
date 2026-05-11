@@ -29,9 +29,9 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
-     x-data="{ active: {{ active_category_id if active_category_id is not none else 'null' }} }"
-     x-init="const _g = document.getElementById('menu-poll'); setInterval(() => htmx.ajax('GET', _g.getAttribute('hx-get') || '/menu', { target: '#product-grid', swap: 'innerHTML' }), 5000)"
-     @categoryreset.window="active = null; $refs.grid.setAttribute('hx-get', '/menu')">
+     x-data="{}"
+     x-init="setInterval(() => { const slug = window.location.pathname.match(/\/menu\/([^/]+)/)?.[1]; htmx.ajax('GET', slug ? '/menu/' + slug : '/menu', { target: '#product-grid', swap: 'innerHTML' }); }, 5000)"
+     @categoryreset.window="history.pushState(null, '', '/menu')">
 
     {% if products or categories %}
     <h1 class="text-2xl font-bold text-gray-900 mb-6">Меню</h1>
@@ -42,18 +42,7 @@
         {% include "client/partials/category_tabs.html" %}
     </div>
 
-    {#
-        Источник истины для URL поллинга: hx-get читается Alpine-интервалом каждые 5s.
-        hx-trigger убран — поллинг управляется через setInterval в x-init выше.
-        category_tabs.html и @categoryreset обновляют hx-get через setAttribute — без изменений.
-    #}
-    <div id="menu-poll"
-         x-ref="grid"
-         hx-get="{{ '/menu?category_id=' + active_category_id|string if active_category_id is not none else '/menu' }}"
-         hx-target="#product-grid"
-         hx-swap="innerHTML"></div>
 
-    {# Чистый контейнер контента — без HTMX-атрибутов, стабильный таргет для свапа #}
     <div id="product-grid">
         {% include "client/partials/product_grid.html" %}
     </div>

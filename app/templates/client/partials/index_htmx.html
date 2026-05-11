@@ -3,7 +3,7 @@
     <h2 class="text-lg font-bold text-gray-900 mb-5">Категории</h2>
     <div class="flex gap-3 flex-wrap">
         {% for cat in categories %}
-        <a href="/menu?category_id={{ cat.id }}"
+        <a href="/menu/{{ cat.slug }}"
            class="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium
                   text-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors
                   shadow-sm">

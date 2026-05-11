@@ -1,26 +1,30 @@
 {% if categories %}
 <button
-    @click="active = null; $refs.grid.setAttribute('hx-get', '/menu')"
     hx-get="/menu"
     hx-target="#product-grid"
     hx-swap="innerHTML"
-    :class="active === null
-        ? 'bg-orange-500 text-white border-orange-500'
-        : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-500'"
-    class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors shadow-sm">
+    hx-push-url="/menu"
+    class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors shadow-sm
+           {% if active_category_slug is none %}
+               bg-orange-500 text-white border-orange-500
+           {% else %}
+               bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-500
+           {% endif %}">
     Все
 </button>
 
 {% for cat in categories %}
 <button
-    @click="active = {{ cat.id }}; $refs.grid.setAttribute('hx-get', '/menu?category_id={{ cat.id }}')"
-    hx-get="/menu?category_id={{ cat.id }}"
+    hx-get="/menu/{{ cat.slug }}"
     hx-target="#product-grid"
     hx-swap="innerHTML"
-    :class="active === {{ cat.id }}
-        ? 'bg-orange-500 text-white border-orange-500'
-        : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-500'"
-    class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors shadow-sm">
+    hx-push-url="/menu/{{ cat.slug }}"
+    class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors shadow-sm
+           {% if active_category_slug == cat.slug %}
+               bg-orange-500 text-white border-orange-500
+           {% else %}
+               bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-500
+           {% endif %}">
     {{ cat.name }}
 </button>
 {% endfor %}

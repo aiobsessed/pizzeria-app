@@ -93,37 +93,43 @@ async def index(
 
 
 @router.get("/menu", response_class=HTMLResponse)
+@router.get("/menu/{category_slug}", response_class=HTMLResponse)
 async def menu(
     request: Request,
-    category_id: int | None = None,
+    category_slug: str | None = None,
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
     categories = await CategoryService(session).get_all_active()
+    active_categories_by_slug = {c.slug: c for c in categories}
 
-    # Если выбранная категория стала скрытой — сбрасываем фильтр и сигнализируем клиенту.
-    category_reset = category_id is not None and category_id not in {c.id for c in categories}
+    active_category = active_categories_by_slug.get(category_slug) if category_slug else None
+
+    # Если slug передан, но категория скрыта или не существует — сбрасываем фильтр.
+    category_reset = category_slug is not None and active_category is None
     if category_reset:
-        category_id = None
+        category_slug = None
 
     products = (
-        await ProductService(session).get_available_by_category(category_id)
-        if category_id is not None
+        await ProductService(session).get_available_by_category(active_category.id)
+        if active_category is not None
         else await ProductService(session).get_all_available()
     )
     _, _, cart_count = await CartService(session).get_summary(client.id)
 
+    context = {
+        "products": products,
+        "categories": categories,
+        # slug используется в URL-генерации шаблонов
+        "active_category_slug": active_category.slug if active_category else None,
+        # id сохраняется для обратной совместимости с product_grid.html (empty-state)
+        "active_category_id": active_category.id if active_category else None,
+    }
+
     if request.headers.get("HX-Request"):
-        # Один ответ обновляет и сетку товаров, и вкладки категорий (через OOB).
         response = templates.TemplateResponse(
-            request,
-            "client/partials/menu_htmx.html",
-            {
-                "products": products,
-                "categories": categories,
-                "active_category_id": category_id,
-            },
+            request, "client/partials/menu_htmx.html", context
         )
         if category_reset:
             response.headers["HX-Trigger"] = json.dumps({"categoryReset": True})
@@ -132,14 +138,7 @@ async def menu(
     response = templates.TemplateResponse(
         request,
         "client/menu.html",
-        {
-            "client": client,
-            "categories": categories,
-            "products": products,
-            "active_category_id": category_id,
-            "cart_count": cart_count,
-            "flash": flash,
-        },
+        {**context, "client": client, "cart_count": cart_count, "flash": flash},
     )
     response.delete_cookie("flash")
     return response
@@ -257,7 +256,6 @@ async def update_cart_item(
         {
             "item": updated_item,
             "total": total,
-            "htmx_request": True,
             "has_unavailable": bool(unavailable_names),
             "unavailable_names": unavailable_names,
         },
