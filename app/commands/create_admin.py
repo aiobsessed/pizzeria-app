@@ -8,19 +8,18 @@ import asyncio
 import getpass
 import sys
 
-from app.core.enums import EmployeeRole
 from app.core.security import hash_password
 from app.database.database import db
-from app.models import Employee, Position
+from app.models import Employee
 from app.repositories import EmployeeRepository, PositionRepository
 
 _ADMIN_POSITION_NAME = "Администратор"
 
 
-def _prompt(label: str, required: bool = True) -> str:
+def _prompt(label: str) -> str:
     while True:
         value = input(f"{label}: ").strip()
-        if value or not required:
+        if value:
             return value
         print("  ✗ Поле обязательно")
 
@@ -65,19 +64,18 @@ async def _create_admin() -> None:
 
         position = await position_repo.get_by_name(_ADMIN_POSITION_NAME)
         if position is None:
-            position = await position_repo.create(Position(name=_ADMIN_POSITION_NAME))
-            print(f"  Создана должность «{_ADMIN_POSITION_NAME}»")
+            print(f"\n✗ Должность «{_ADMIN_POSITION_NAME}» не найдена.")
+            print("  Запустите сервер хотя бы раз для инициализации базовых данных.")
+            sys.exit(1)
 
-        admin = Employee(
+        await employee_repo.create(Employee(
             position_id=position.id,
             name=name,
             email=email,
             phone=phone,
             inn=inn,
-            role=EmployeeRole.admin,
             hashed_password=hash_password(password),
-        )
-        await employee_repo.create(admin)
+        ))
 
     print(f"\n✓ Администратор '{name}' ({email}) успешно создан.\n")
 

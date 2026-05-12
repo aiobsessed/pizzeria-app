@@ -12,7 +12,7 @@ from app.core.enums import DeliveryType, OrderStatus, PaymentMethod
 
 if TYPE_CHECKING:
     from app.models.client import Client
-    from app.models.courier import Courier
+    from app.models.employee import Employee
     from app.models.address import Address
     from app.models.product import Product
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class Order(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
-    courier_id: Mapped[int | None] = mapped_column(ForeignKey("couriers.id"))
+    courier_id: Mapped[int | None] = mapped_column(ForeignKey("employees.id"))
     address_id: Mapped[int | None] = mapped_column(ForeignKey("addresses.id"))
     delivery_type: Mapped[DeliveryType] = mapped_column(SAEnum(DeliveryType))
     payment_method: Mapped[PaymentMethod] = mapped_column(SAEnum(PaymentMethod))
@@ -34,7 +34,7 @@ class Order(Base):
     )
 
     client: Mapped[Client] = relationship(back_populates="orders")
-    courier: Mapped[Courier | None] = relationship(back_populates="orders")
+    courier: Mapped[Employee | None] = relationship(foreign_keys=[courier_id])
     address: Mapped[Address | None] = relationship()
     items: Mapped[list[OrderItem]] = relationship(back_populates="order")
 

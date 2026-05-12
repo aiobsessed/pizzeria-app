@@ -2,7 +2,8 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.core.enums import EmployeeRole, EmployeeStatus
+from app.core.enums import EmployeeStatus
+from app.schemas.position import PositionRead
 
 
 class EmployeeBase(BaseModel):
@@ -11,7 +12,6 @@ class EmployeeBase(BaseModel):
     email: EmailStr
     phone: str = Field(max_length=20)
     inn: str = Field(max_length=12)
-    role: EmployeeRole
 
 
 class EmployeeCreate(EmployeeBase):
@@ -20,6 +20,7 @@ class EmployeeCreate(EmployeeBase):
 
 class EmployeeRead(EmployeeBase):
     id: int
+    position: PositionRead
     status: EmployeeStatus
     fired_at: date | None
 
@@ -32,6 +33,4 @@ class EmployeeUpdate(BaseModel):
     email: EmailStr | None = None
     phone: str | None = Field(None, max_length=20)
     inn: str | None = Field(None, max_length=12)
-    role: EmployeeRole | None = None
-    # status — управляется через отдельный эндпоинт (PATCH /status)
-    # fired_at — управляется сервисом автоматически при status → fired
+    status: EmployeeStatus | None = None

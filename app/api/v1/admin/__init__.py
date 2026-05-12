@@ -1,7 +1,5 @@
 from .categories import router as admin_categories_router
 from .products import router as admin_products_router
 from .orders import router as admin_orders_router
-from .couriers import router as admin_couriers_router
 from .clients import router as admin_clients_router
 from .employees import router as admin_employees_router
-from .positions import router as admin_positions_router

@@ -9,16 +9,11 @@
 {% block content %}
 <div class="max-w-lg mx-auto px-4 py-6 space-y-6">
 
-    {# Header: courier name + status toggle #}
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-xl font-bold text-gray-900">Мои заказы</h1>
-            <p class="text-sm text-gray-400 mt-0.5">Активные назначения</p>
-        </div>
-        {% include "courier/partials/status_toggle.html" %}
+    <div>
+        <h1 class="text-xl font-bold text-gray-900">Мои заказы</h1>
+        <p class="text-sm text-gray-400 mt-0.5">Активные назначения</p>
     </div>
 
-    {# Orders list #}
     {% if not orders %}
     <div class="text-center py-16">
         <p class="text-5xl mb-4">🛵</p>

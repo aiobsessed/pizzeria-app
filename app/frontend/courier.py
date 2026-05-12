@@ -6,9 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db, get_flash, require_courier_from_cookie
 from app.core.enums import OrderStatus
 from app.core.exceptions import ConflictError, NotFoundError
-from app.models import Courier
-from app.schemas import CourierUpdate
-from app.services import CourierService, OrderService
+from app.models import Employee
+from app.services import OrderService
 
 router = APIRouter(prefix="/courier", tags=["frontend-courier"])
 templates = Jinja2Templates(directory="app/templates")
@@ -20,11 +19,11 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("", response_class=HTMLResponse)
 async def courier_dashboard(
     request: Request,
-    courier: Courier = Depends(require_courier_from_cookie),
+    employee: Employee = Depends(require_courier_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    all_orders = await OrderService(session).get_by_courier(courier.id)
+    all_orders = await OrderService(session).get_by_courier(employee.id)
     active_orders = [
         o for o in all_orders
         if o.status not in (OrderStatus.delivered, OrderStatus.canceled)
@@ -34,8 +33,7 @@ async def courier_dashboard(
         request,
         "courier/index.html",
         {
-            "employee": courier.employee,
-            "courier": courier,
+            "employee": employee,
             "flash": flash,
             "orders": active_orders,
             "OrderStatus": OrderStatus,
@@ -52,11 +50,11 @@ async def courier_dashboard(
 async def deliver_order(
     request: Request,
     order_id: int,
-    courier: Courier = Depends(require_courier_from_cookie),
+    employee: Employee = Depends(require_courier_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
     try:
-        order = await OrderService(session).deliver(courier.id, order_id)
+        order = await OrderService(session).deliver(employee.id, order_id)
     except (NotFoundError, ConflictError):
         return HTMLResponse("", status_code=404)
 
@@ -66,27 +64,5 @@ async def deliver_order(
         {
             "order": order,
             "OrderStatus": OrderStatus,
-        },
-    )
-
-
-# ── Status toggle ──────────────────────────────────────────────────────────────
-
-
-@router.post("/me/status", response_class=HTMLResponse)
-async def toggle_availability(
-    request: Request,
-    courier: Courier = Depends(require_courier_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> HTMLResponse:
-    updated = await CourierService(session).update(
-        courier.id, CourierUpdate(is_available=not courier.is_available)
-    )
-
-    return templates.TemplateResponse(
-        request,
-        "courier/partials/status_toggle.html",
-        {
-            "courier": updated,
         },
     )

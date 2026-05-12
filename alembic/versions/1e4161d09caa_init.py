@@ -1,8 +1,8 @@
-"""initial
+"""init
 
-Revision ID: 9469b116cc9a
+Revision ID: 1e4161d09caa
 Revises: 
-Create Date: 2026-05-08 11:05:31.597578
+Create Date: 2026-05-12 11:10:49.663736
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '9469b116cc9a'
+revision: str = '1e4161d09caa'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -45,6 +45,7 @@ def upgrade() -> None:
     op.create_table('positions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('role', sa.String(length=20), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
@@ -75,7 +76,6 @@ def upgrade() -> None:
     sa.Column('phone', sa.String(length=20), nullable=False),
     sa.Column('hashed_password', sa.String(length=255), nullable=False),
     sa.Column('inn', sa.String(length=12), nullable=False),
-    sa.Column('role', sa.Enum('admin', 'courier', name='employeerole'), nullable=False),
     sa.Column('status', sa.Enum('active', 'fired', 'on_leave', name='employeestatus'), server_default='active', nullable=False),
     sa.Column('fired_at', sa.Date(), nullable=True),
     sa.ForeignKeyConstraint(['position_id'], ['positions.id'], ),

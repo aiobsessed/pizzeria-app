@@ -13,6 +13,7 @@ from app.api.v1 import routers
 from app.core.config import settings
 from app.core.exceptions import FrontendRedirect
 from app.database.database import db
+from app.database.seeds import check_admin_exists, seed_defaults
 from app.frontend import admin_router, auth_router, client_router, courier_router
 
 templates = Jinja2Templates(directory="app/templates")
@@ -22,6 +23,15 @@ templates = Jinja2Templates(directory="app/templates")
 async def lifespan(app: FastAPI):
     await db.create_database_if_not_exist()
     await asyncio.to_thread(lambda: command.upgrade(Config("alembic.ini"), "head"))
+
+    async with db.session() as session:
+        await seed_defaults(session)
+        if not await check_admin_exists(session):
+            print("\n" + "=" * 56)
+            print("  ВНИМАНИЕ: в системе нет ни одного администратора.")
+            print("  Запустите: python -m app.commands.create_admin")
+            print("=" * 56 + "\n")
+
     yield
     await db.dispose()
 

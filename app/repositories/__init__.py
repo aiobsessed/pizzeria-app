@@ -1,12 +1,10 @@
-from .client import ClientRepository
-from .position import PositionRepository
-from .employee import EmployeeRepository
-
 from .address import AddressRepository
 from .cart import CartRepository
 from .cart_item import CartItemRepository
 from .category import CategoryRepository
-from .courier import CourierRepository
+from .client import ClientRepository
+from .employee import EmployeeRepository
 from .order import OrderRepository
 from .order_item import OrderItemRepository
+from .position import PositionRepository
 from .product import ProductRepository

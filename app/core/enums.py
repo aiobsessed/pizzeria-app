@@ -1,12 +1,7 @@
 from enum import Enum
 
 
-# ─── Роли и статусы сотрудников ──────────────────────────────────────────────
-class EmployeeRole(str, Enum):
-    admin = "admin"
-    courier = "courier"
-
-
+# ─── Статусы сотрудников ─────────────────────────────────────────────────────
 class EmployeeStatus(str, Enum):
     active = "active"
     fired = "fired"

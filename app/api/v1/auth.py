@@ -41,6 +41,6 @@ async def staff_login(
     token = create_access_token(
         subject_id=employee.id,
         subject_type="employee",
-        role=employee.role.value,
+        role=employee.position.role.value,
     )
     return TokenResponse(access_token=token)

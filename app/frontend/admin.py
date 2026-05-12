@@ -10,28 +10,24 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import flash_redirect, get_db, get_flash, require_admin_from_cookie
-from app.core.enums import DeliveryType, EmployeeRole, EmployeeStatus, OrderStatus, PaymentMethod
+from app.core.enums import DeliveryType, EmployeeStatus, OrderStatus, PaymentMethod
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import Employee, Order
 from app.schemas import (
     CategoryCreate,
     CategoryUpdate,
-    CourierCreate,
     EmployeeCreate,
     EmployeeUpdate,
     OrderUpdate,
-    PositionCreate,
-    PositionUpdate,
     ProductCreate,
     ProductUpdate,
 )
 from app.services import (
+    PositionService,
     CategoryService,
     ClientService,
-    CourierService,
     EmployeeService,
     OrderService,
-    PositionService,
     ProductService,
 )
 
@@ -94,7 +90,6 @@ def _build_excel(orders: list[Order], date_from: date | None, date_to: date | No
     stats = _compute_stats(orders)
     period = f"{date_from or 'начало'} — {date_to or 'конец'}"
 
-    # ── Sheet 1: Сводка ───────────────────────────────────────────────────────
     ws = wb.active
     ws.title = "Сводка"
 
@@ -137,7 +132,6 @@ def _build_excel(orders: list[Order], date_from: date | None, date_to: date | No
     ws.column_dimensions["A"].width = 35
     ws.column_dimensions["B"].width = 20
 
-    # ── Sheet 2: Заказы ───────────────────────────────────────────────────────
     ws2 = wb.create_sheet("Заказы")
     headers = ["#", "Дата", "Клиент", "Позиции", "Итого, ₽", "Статус", "Доставка", "Оплата", "Курьер"]
     ws2.append(headers)
@@ -148,7 +142,7 @@ def _build_excel(orders: list[Order], date_from: date | None, date_to: date | No
 
     for order in orders:
         items_str = ", ".join(f"{i.product.name} ×{i.quantity}" for i in order.items)
-        courier_name = order.courier.employee.name if order.courier else "—"
+        courier_name = order.courier.name if order.courier else "—"
         ws2.append([
             order.id,
             order.created_at.strftime("%d.%m.%Y %H:%M"),
@@ -171,17 +165,16 @@ def _build_excel(orders: list[Order], date_from: date | None, date_to: date | No
 
 
 def _get_cyrillic_font() -> str:
-    """Регистрирует Unicode-совместимый TTF шрифт и возвращает его имя."""
     import os
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 
     candidates = [
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",  # Ubuntu
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",                  # Ubuntu
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",                  # Ubuntu
-        "/System/Library/Fonts/Supplemental/Arial.ttf",                     # macOS
-        "C:\\Windows\\Fonts\\arial.ttf",                                    # Windows
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "C:\\Windows\\Fonts\\arial.ttf",
     ]
     for path in candidates:
         if os.path.exists(path):
@@ -219,7 +212,6 @@ def _build_pdf(orders: list[Order], date_from: date | None, date_to: date | None
                             _style("title", fontSize=15, spaceAfter=5)))
     story.append(Spacer(1, 5*mm))
 
-    # Сводная таблица
     summary_data = [
         ["Всего заказов", "Доставлено", "Отменено", "Выручка, ₽"],
         [str(stats.total_orders), str(stats.delivered_count),
@@ -245,7 +237,6 @@ def _build_pdf(orders: list[Order], date_from: date | None, date_to: date | None
     story.append(Spacer(1, 7*mm))
     story.append(Paragraph("Заказы", _style("h2", fontSize=11, spaceBefore=4, spaceAfter=4)))
 
-    # Таблица заказов
     col_widths = [12*mm, 26*mm, 33*mm, 88*mm, 22*mm, 22*mm, 22*mm, 22*mm]
     rows = [["#", "Дата", "Клиент", "Позиции", "Итого, ₽", "Статус", "Доставка", "Оплата"]]
     for o in orders:
@@ -300,7 +291,7 @@ async def dashboard(
     orders   = await OrderService(session).get_all_with_items()
     clients  = await ClientService(session).get_all()
     products = await ProductService(session).get_all()
-    couriers = await CourierService(session).get_all()
+    couriers = await EmployeeService(session).get_all(role="courier")
 
     response = templates.TemplateResponse(
         request,
@@ -339,7 +330,7 @@ async def orders_page(
             pass
 
     orders   = await OrderService(session).get_all_with_items(status=status_enum)
-    couriers = await CourierService(session).get_all()
+    couriers = await EmployeeService(session).get_all(role="courier")
 
     response = templates.TemplateResponse(
         request,
@@ -372,7 +363,7 @@ async def update_order_status(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    couriers = await CourierService(session).get_all()
+    couriers = await EmployeeService(session).get_all(role="courier")
     return templates.TemplateResponse(
         request,
         "admin/partials/order_row.html",
@@ -394,7 +385,7 @@ async def assign_courier(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    couriers = await CourierService(session).get_all()
+    couriers = await EmployeeService(session).get_all(role="courier")
     return templates.TemplateResponse(
         request,
         "admin/partials/order_row.html",
@@ -643,7 +634,6 @@ async def employees_page(
             "flash":          flash,
             "employees":      employees,
             "positions":      positions,
-            "EmployeeRole":   EmployeeRole,
             "EmployeeStatus": EmployeeStatus,
         },
     )
@@ -658,7 +648,6 @@ async def create_employee(
     email: str       = Form(),
     phone: str       = Form(),
     inn: str         = Form(),
-    role: str        = Form(),
     password: str    = Form(),
     _: Employee      = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
@@ -671,7 +660,6 @@ async def create_employee(
                 email=email,
                 phone=phone,
                 inn=inn,
-                role=EmployeeRole(role),
                 password=password,
             )
         )
@@ -689,7 +677,7 @@ async def update_employee(
     email: str       = Form(),
     phone: str       = Form(),
     inn: str         = Form(),
-    role: str        = Form(),
+    status: str      = Form(default=""),
     _: Employee      = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
@@ -702,28 +690,13 @@ async def update_employee(
                 email=email,
                 phone=phone,
                 inn=inn,
-                role=EmployeeRole(role),
+                status=EmployeeStatus(status) if status else None,
             ),
         )
     except (NotFoundError, ConflictError) as e:
         return flash_redirect("/admin/employees", str(e))
 
     return flash_redirect("/admin/employees", "Сотрудник обновлён", success=True)
-
-
-@router.post("/employees/{employee_id}/status")
-async def update_employee_status(
-    employee_id: int,
-    status: str  = Form(),
-    _: Employee  = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
-    try:
-        await EmployeeService(session).update_status(employee_id, EmployeeStatus(status))
-    except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/employees", str(e))
-
-    return flash_redirect("/admin/employees", "Статус обновлён", success=True)
 
 
 @router.post("/employees/{employee_id}/delete")
@@ -738,127 +711,6 @@ async def delete_employee(
         return flash_redirect("/admin/employees", str(e))
 
     return flash_redirect("/admin/employees", "Сотрудник удалён", success=True)
-
-
-# ── Couriers ──────────────────────────────────────────────────────────────────
-
-
-@router.get("/couriers", response_class=HTMLResponse)
-async def couriers_page(
-    request: Request,
-    employee: Employee = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-    flash: str | None = Depends(get_flash),
-) -> HTMLResponse:
-    couriers            = await CourierService(session).get_all()
-    all_employees       = await EmployeeService(session).get_all()
-    courier_emp_ids     = {c.employee_id for c in couriers}
-    available_employees = [e for e in all_employees if e.id not in courier_emp_ids]
-
-    response = templates.TemplateResponse(
-        request,
-        "admin/couriers.html",
-        {
-            "employee":            employee,
-            "flash":               flash,
-            "couriers":            couriers,
-            "available_employees": available_employees,
-        },
-    )
-    response.delete_cookie("flash")
-    return response
-
-
-@router.post("/couriers/create")
-async def create_courier(
-    employee_id: int = Form(),
-    _: Employee      = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
-    try:
-        await CourierService(session).create(CourierCreate(employee_id=employee_id))
-    except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/couriers", str(e))
-
-    return flash_redirect("/admin/couriers", "Курьер добавлен", success=True)
-
-
-@router.post("/couriers/{courier_id}/delete")
-async def delete_courier(
-    courier_id: int,
-    _: Employee = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
-    try:
-        await CourierService(session).delete(courier_id)
-    except NotFoundError as e:
-        return flash_redirect("/admin/couriers", str(e))
-
-    return flash_redirect("/admin/couriers", "Курьер удалён", success=True)
-
-
-# ── Positions ─────────────────────────────────────────────────────────────────
-
-
-@router.get("/positions", response_class=HTMLResponse)
-async def positions_page(
-    request: Request,
-    employee: Employee = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-    flash: str | None = Depends(get_flash),
-) -> HTMLResponse:
-    positions = await PositionService(session).get_all()
-
-    response = templates.TemplateResponse(
-        request,
-        "admin/positions.html",
-        {"employee": employee, "flash": flash, "positions": positions},
-    )
-    response.delete_cookie("flash")
-    return response
-
-
-@router.post("/positions/create")
-async def create_position(
-    name: str   = Form(),
-    _: Employee = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
-    try:
-        await PositionService(session).create(PositionCreate(name=name))
-    except ConflictError as e:
-        return flash_redirect("/admin/positions", str(e))
-
-    return flash_redirect("/admin/positions", "Должность создана", success=True)
-
-
-@router.post("/positions/{position_id}/update")
-async def update_position(
-    position_id: int,
-    name: str   = Form(),
-    _: Employee = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
-    try:
-        await PositionService(session).update(position_id, PositionUpdate(name=name))
-    except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/positions", str(e))
-
-    return flash_redirect("/admin/positions", "Должность обновлена", success=True)
-
-
-@router.post("/positions/{position_id}/delete")
-async def delete_position(
-    position_id: int,
-    _: Employee = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
-    try:
-        await PositionService(session).delete(position_id)
-    except NotFoundError as e:
-        return flash_redirect("/admin/positions", str(e))
-
-    return flash_redirect("/admin/positions", "Должность удалена", success=True)
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────

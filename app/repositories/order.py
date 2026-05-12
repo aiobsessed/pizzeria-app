@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.enums import DeliveryType, OrderStatus, PaymentMethod
 from .base import BaseRepository
-from app.models import Courier, Order, OrderItem
+from app.models import Order, OrderItem
 
 
 class OrderRepository(BaseRepository[Order]):
@@ -29,7 +29,7 @@ class OrderRepository(BaseRepository[Order]):
                 selectinload(Order.items).selectinload(OrderItem.product),
                 selectinload(Order.client),
                 selectinload(Order.address),
-                selectinload(Order.courier).selectinload(Courier.employee),
+                selectinload(Order.courier),
             )
             .order_by(Order.created_at.desc())
         )
@@ -57,7 +57,7 @@ class OrderRepository(BaseRepository[Order]):
                 selectinload(Order.items).selectinload(OrderItem.product),
                 selectinload(Order.client),
                 selectinload(Order.address),
-                selectinload(Order.courier).selectinload(Courier.employee),
+                selectinload(Order.courier),
             )
             .where(Order.id == order_id)
         )

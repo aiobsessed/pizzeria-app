@@ -49,7 +49,7 @@
             <option value="">— не назначен —</option>
             {% for c in couriers %}
             <option value="{{ c.id }}" {{ 'selected' if order.courier_id == c.id }}>
-                {{ c.employee.name }}
+                {{ c.name }}
             </option>
             {% endfor %}
         </select>

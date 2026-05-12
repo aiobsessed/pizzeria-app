@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.dependencies import flash_redirect, get_db, get_flash
-from app.core.enums import EmployeeRole
 from app.core.exceptions import AuthError, ConflictError
 from app.core.security import create_access_token, verify_token
 from app.schemas import ClientCreate
@@ -75,8 +74,9 @@ async def staff_login_submit(
     except AuthError:
         return flash_redirect("/staff/login", "Неверный логин или пароль")
 
-    token = create_access_token(subject_id=user.id, subject_type="employee", role=user.role.value)
-    redirect_url = "/admin" if user.role == EmployeeRole.admin else "/courier"
+    role: str = user.position.role
+    token = create_access_token(subject_id=user.id, subject_type="employee", role=role)
+    redirect_url = "/admin" if role == "admin" else "/courier"
     response = RedirectResponse(url=redirect_url, status_code=302)
     response.set_cookie(
         "access_token",

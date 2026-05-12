@@ -2,7 +2,7 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import EmployeeRole, EmployeeStatus
+from app.core.enums import EmployeeStatus
 from app.core.exceptions import AuthError, ConflictError, NotFoundError
 from app.core.security import hash_password, verify_password
 from app.models import Employee
@@ -15,15 +15,12 @@ class EmployeeService:
         self.employee_repo = EmployeeRepository(session)
         self.position_repo = PositionRepository(session)
 
-    # -----------------------
-    # Admin methods
-    # -----------------------
     async def get_all(
         self,
         name: str | None = None,
         email: str | None = None,
         phone: str | None = None,
-        role: EmployeeRole | None = None,
+        role: str | None = None,
         status: EmployeeStatus | None = None,
     ) -> list[Employee]:
         return await self.employee_repo.get_all(
@@ -47,8 +44,9 @@ class EmployeeService:
             raise ConflictError("INN is already taken")
 
         payload = data.model_dump(exclude={"password"})
-        new_employee = Employee(**payload, hashed_password=hash_password(data.password))
-        return await self.employee_repo.create(new_employee)
+        return await self.employee_repo.create(
+            Employee(**payload, hashed_password=hash_password(data.password))
+        )
 
     async def update(self, employee_id: int, data: EmployeeUpdate) -> Employee:
         employee = await self.get_by_id(employee_id)
@@ -69,28 +67,21 @@ class EmployeeService:
             if await self.employee_repo.get_by_inn(data.inn) is not None:
                 raise ConflictError("INN is already taken")
 
-        for field, value in data.model_dump(exclude_none=True).items():
+        for field, value in data.model_dump(exclude_none=True, exclude={"status"}).items():
             setattr(employee, field, value)
-        return await self.employee_repo.update(employee)
 
-    async def update_status(self, employee_id: int, status: EmployeeStatus) -> Employee:
-        employee = await self.get_by_id(employee_id)
-        if employee.status == status:
-            raise ConflictError(f"Employee already has status '{status.value}'")
-        employee.status = status
-        if status == EmployeeStatus.fired:
-            employee.fired_at = date.today()
+        if data.status is not None and data.status != employee.status:
+            employee.status = data.status
+            if data.status == EmployeeStatus.fired:
+                employee.fired_at = date.today()
+
         return await self.employee_repo.update(employee)
 
     async def delete(self, employee_id: int) -> None:
         employee = await self.get_by_id(employee_id)
         await self.employee_repo.delete(employee)
 
-    # -----------------------
-    # Auth methods
-    # -----------------------
     async def authenticate(self, login: str, password: str) -> Employee:
-        """Используется в POST /auth/staff/login. login — email или телефон."""
         employee = await self.employee_repo.get_by_email(login)
         if employee is None:
             employee = await self.employee_repo.get_by_phone(login)

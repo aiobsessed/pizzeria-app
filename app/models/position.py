@@ -16,5 +16,6 @@ class Position(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
+    role: Mapped[str] = mapped_column(String(20))
 
     employees: Mapped[list[Employee]] = relationship(back_populates="position")
