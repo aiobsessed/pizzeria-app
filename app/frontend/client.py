@@ -2,7 +2,6 @@ import json
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
@@ -13,6 +12,7 @@ from app.core.dependencies import (
 )
 from app.core.enums import DeliveryType, PaymentMethod
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
+from app.frontend.templates import templates
 from app.models import Client, CartItem
 from app.schemas import (
     AddressCreate,
@@ -32,7 +32,6 @@ from app.services import (
 )
 
 router = APIRouter(tags=["frontend-client"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 def _htmx_flash(response: HTMLResponse, message: str, success: bool = False) -> HTMLResponse:

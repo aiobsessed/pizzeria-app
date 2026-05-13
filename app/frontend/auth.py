@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.dependencies import flash_redirect, get_db, get_flash
 from app.core.exceptions import AuthError, ConflictError
 from app.core.security import create_access_token, verify_token
+from app.frontend.templates import templates
 from app.schemas import ClientCreate
 from app.services import ClientService, EmployeeService
 
 router = APIRouter(tags=["frontend-auth"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 # ── Клиентский логин ──────────────────────────────────────────────────────────

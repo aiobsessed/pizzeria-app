@@ -56,7 +56,7 @@
                 <div>
                     <p class="text-sm font-semibold text-gray-900">Заказ #{{ order.id }}</p>
                     <p class="text-xs text-gray-400 mt-0.5">
-                        {{ order.created_at.strftime("%d.%m.%Y в %H:%M") }}
+                        {{ (order.created_at | to_msk).strftime("%d.%m.%Y в %H:%M") }}
                     </p>
                 </div>
 

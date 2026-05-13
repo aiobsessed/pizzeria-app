@@ -11,6 +11,8 @@
     "on_leave": "bg-amber-50 text-amber-700 border-amber-200",
 } %}
 
+{% set any_filter = filter_position_id or filter_status or filter_name or filter_email or filter_phone %}
+
 <div x-data="{
     open: false,
     isEdit: false,
@@ -27,7 +29,7 @@
     }
 }">
 
-<div class="flex items-center justify-between mb-6">
+<div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold text-gray-900">Сотрудники</h1>
     <button @click="openCreate()"
             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors">
@@ -36,10 +38,22 @@
 </div>
 
 {# Filters #}
-<form method="get" action="/admin/employees" class="flex items-center gap-3 mb-4">
+<form method="get" action="/admin/employees" class="flex flex-wrap items-end gap-3 mb-4">
+    <input type="text" name="name" value="{{ filter_name or '' }}" placeholder="Имя"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-36">
+
+    <input type="text" name="email" value="{{ filter_email or '' }}" placeholder="Email"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-44">
+
+    <input type="text" name="phone" value="{{ filter_phone or '' }}" placeholder="Телефон"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-36">
+
     <select name="position_id"
-            onchange="this.form.submit()"
-            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
         <option value="">Все должности</option>
         {% for pos in positions %}
         <option value="{{ pos.id }}" {% if filter_position_id == pos.id %}selected{% endif %}>
@@ -49,8 +63,8 @@
     </select>
 
     <select name="status"
-            onchange="this.form.submit()"
-            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
         <option value="">Все статусы</option>
         {% for s in EmployeeStatus %}
         <option value="{{ s.value }}" {% if filter_status == s.value %}selected{% endif %}>
@@ -59,12 +73,19 @@
         {% endfor %}
     </select>
 
-    {% if filter_position_id or filter_status %}
-    <a href="/admin/employees"
-       class="px-3 py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">
-        ✕ Сбросить
-    </a>
-    {% endif %}
+    <div class="flex gap-2">
+        <button type="submit"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium
+                       rounded-xl transition-colors">
+            Найти
+        </button>
+        {% if any_filter %}
+        <a href="/admin/employees"
+           class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-xl transition-colors">
+            ✕ Сбросить
+        </a>
+        {% endif %}
+    </div>
 </form>
 
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -72,11 +93,7 @@
     <div class="text-center py-16 text-gray-400">
         <p class="text-4xl mb-3">👨‍💼</p>
         <p class="text-sm">
-            {% if filter_position_id or filter_status %}
-                Сотрудники с выбранными фильтрами не найдены
-            {% else %}
-                Сотрудников пока нет
-            {% endif %}
+            {{ 'Сотрудники с выбранными фильтрами не найдены' if any_filter else 'Сотрудников пока нет' }}
         </p>
     </div>
     {% else %}

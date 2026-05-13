@@ -7,7 +7,6 @@ from alembic.config import Config
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from app.api.v1 import routers
 from app.core.config import settings
@@ -15,8 +14,7 @@ from app.core.exceptions import FrontendRedirect
 from app.database.database import db
 from app.database.seeds import check_admin_exists, seed_defaults
 from app.frontend import admin_router, auth_router, client_router, courier_router
-
-templates = Jinja2Templates(directory="app/templates")
+from app.frontend.templates import templates
 
 
 @asynccontextmanager

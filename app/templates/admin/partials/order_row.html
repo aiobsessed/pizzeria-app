@@ -55,6 +55,6 @@
         </select>
     </td>
     <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
-        {{ order.created_at.strftime("%d.%m.%Y %H:%M") }}
+        {{ (order.created_at | to_msk).strftime("%d.%m.%Y %H:%M") }}
     </td>
 </tr>

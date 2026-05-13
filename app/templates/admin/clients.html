@@ -4,13 +4,53 @@
 
 {% block content %}
 
-<h1 class="text-2xl font-bold text-gray-900 mb-6">Клиенты</h1>
+{% set any_filter = filter_name or filter_email or filter_phone or filter_is_blocked %}
+
+<div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold text-gray-900">Клиенты</h1>
+</div>
+
+<form method="get" action="/admin/clients" class="flex flex-wrap items-end gap-3 mb-4">
+    <input type="text" name="name" value="{{ filter_name or '' }}" placeholder="Имя"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-40">
+
+    <input type="text" name="email" value="{{ filter_email or '' }}" placeholder="Email"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-44">
+
+    <input type="text" name="phone" value="{{ filter_phone or '' }}" placeholder="Телефон"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-36">
+
+    <select name="is_blocked"
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">Все клиенты</option>
+        <option value="false" {{ 'selected' if filter_is_blocked == 'false' }}>Активные</option>
+        <option value="true"  {{ 'selected' if filter_is_blocked == 'true'  }}>Заблокированные</option>
+    </select>
+
+    <div class="flex gap-2">
+        <button type="submit"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium
+                       rounded-xl transition-colors">
+            Найти
+        </button>
+        {% if any_filter %}
+        <a href="/admin/clients"
+           class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-xl transition-colors">
+            ✕ Сбросить
+        </a>
+        {% endif %}
+    </div>
+</form>
 
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     {% if not clients %}
     <div class="text-center py-16 text-gray-400">
         <p class="text-4xl mb-3">👥</p>
-        <p class="text-sm">Клиентов пока нет</p>
+        <p class="text-sm">{{ 'Клиенты с выбранными фильтрами не найдены' if any_filter else 'Клиентов пока нет' }}</p>
     </div>
     {% else %}
     <table class="w-full text-sm">

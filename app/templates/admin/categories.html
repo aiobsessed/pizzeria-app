@@ -4,6 +4,8 @@
 
 {% block content %}
 
+{% set any_filter = filter_name or filter_slug or filter_is_active %}
+
 <div x-data="{
     open: false,
     isEdit: false,
@@ -20,7 +22,7 @@
     }
 }">
 
-<div class="flex items-center justify-between mb-6">
+<div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold text-gray-900">Категории</h1>
     <button @click="openCreate()"
             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors">
@@ -28,12 +30,43 @@
     </button>
 </div>
 
+<form method="get" action="/admin/categories" class="flex flex-wrap items-end gap-3 mb-4">
+    <input type="text" name="name" value="{{ filter_name or '' }}" placeholder="Название"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-44">
+
+    <input type="text" name="slug" value="{{ filter_slug or '' }}" placeholder="Slug"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-36">
+
+    <select name="is_active"
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">Все категории</option>
+        <option value="true"  {{ 'selected' if filter_is_active == 'true'  }}>Активные</option>
+        <option value="false" {{ 'selected' if filter_is_active == 'false' }}>Скрытые</option>
+    </select>
+
+    <div class="flex gap-2">
+        <button type="submit"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium
+                       rounded-xl transition-colors">
+            Найти
+        </button>
+        {% if any_filter %}
+        <a href="/admin/categories"
+           class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-xl transition-colors">
+            ✕ Сбросить
+        </a>
+        {% endif %}
+    </div>
+</form>
+
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     {% if not categories %}
     <div class="text-center py-16 text-gray-400">
         <p class="text-4xl mb-3">🗂</p>
-        <p class="text-sm">Категорий пока нет</p>
-    </div>
+        <p class="text-sm">{{ 'Категории с выбранными фильтрами не найдены' if any_filter else 'Категорий пока нет' }}</p>    </div>
     {% else %}
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-100">

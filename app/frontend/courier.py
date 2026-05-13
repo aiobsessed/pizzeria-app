@@ -1,16 +1,15 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_flash, require_courier_from_cookie
 from app.core.enums import OrderStatus
 from app.core.exceptions import ConflictError, NotFoundError
+from app.frontend.templates import templates
 from app.models import Employee
 from app.services import OrderService
 
 router = APIRouter(prefix="/courier", tags=["frontend-courier"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────

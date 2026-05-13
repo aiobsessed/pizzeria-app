@@ -6,12 +6,12 @@ from io import BytesIO
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import flash_redirect, get_db, get_flash, require_admin_from_cookie
 from app.core.enums import DeliveryType, EmployeeStatus, OrderStatus, PaymentMethod
 from app.core.exceptions import ConflictError, NotFoundError
+from app.frontend.templates import templates
 from app.models import Employee, Order
 from app.schemas import (
     CategoryCreate,
@@ -32,7 +32,6 @@ from app.services import (
 )
 
 router = APIRouter(prefix="/admin", tags=["frontend-admin"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 # ── Report helpers ─────────────────────────────────────────────────────────────
@@ -318,32 +317,45 @@ async def dashboard(
 async def orders_page(
     request: Request,
     status: str | None = None,
+    delivery_type: str | None = None,
+    payment_method: str | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    status_enum: OrderStatus | None = None
-    if status:
+    def _parse_enum(enum_cls, value: str | None):
+        if not value:
+            return None
         try:
-            status_enum = OrderStatus(status)
+            return enum_cls(value)
         except ValueError:
-            pass
+            return None
 
-    orders   = await OrderService(session).get_all_with_items(status=status_enum)
+    status_enum         = _parse_enum(OrderStatus, status)
+    delivery_type_enum  = _parse_enum(DeliveryType, delivery_type)
+    payment_method_enum = _parse_enum(PaymentMethod, payment_method)
+
+    orders   = await OrderService(session).get_all_with_items(
+        status=status_enum,
+        delivery_type=delivery_type_enum,
+        payment_method=payment_method_enum,
+    )
     couriers = await EmployeeService(session).get_all(role="courier")
 
     response = templates.TemplateResponse(
         request,
         "admin/orders.html",
         {
-            "employee":       employee,
-            "flash":          flash,
-            "orders":         orders,
-            "couriers":       couriers,
-            "OrderStatus":    OrderStatus,
-            "DeliveryType":   DeliveryType,
-            "PaymentMethod":  PaymentMethod,
-            "current_status": status_enum,
+            "employee":               employee,
+            "flash":                  flash,
+            "orders":                 orders,
+            "couriers":               couriers,
+            "OrderStatus":            OrderStatus,
+            "DeliveryType":           DeliveryType,
+            "PaymentMethod":          PaymentMethod,
+            "current_status":         status_enum,
+            "current_delivery_type":  delivery_type_enum,
+            "current_payment_method": payment_method_enum,
         },
     )
     response.delete_cookie("flash")
@@ -399,16 +411,34 @@ async def assign_courier(
 @router.get("/clients", response_class=HTMLResponse)
 async def clients_page(
     request: Request,
+    name: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
+    is_blocked: str | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    clients = await ClientService(session).get_all()
+    name  = name  or None
+    email = email or None
+    phone = phone or None
+    is_blocked_filter: bool | None = {"true": True, "false": False}.get(is_blocked or "")
 
+    clients = await ClientService(session).get_all(
+        name=name, email=email, phone=phone, is_blocked=is_blocked_filter
+    )
     response = templates.TemplateResponse(
         request,
         "admin/clients.html",
-        {"employee": employee, "flash": flash, "clients": clients},
+        {
+            "employee":          employee,
+            "flash":             flash,
+            "clients":           clients,
+            "filter_name":       name,
+            "filter_email":      email,
+            "filter_phone":      phone,
+            "filter_is_blocked": is_blocked,
+        },
     )
     response.delete_cookie("flash")
     return response
@@ -439,21 +469,33 @@ async def block_client(
 @router.get("/products", response_class=HTMLResponse)
 async def products_page(
     request: Request,
+    category_id: str | None = None,
+    name: str | None = None,
+    is_available: str | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    products   = await ProductService(session).get_all()
+    category_id_filter: int | None = int(category_id) if category_id else None
+    name = name or None
+    is_available_filter: bool | None = {"true": True, "false": False}.get(is_available or "")
+
+    products   = await ProductService(session).get_all(
+        category_id=category_id_filter, name=name, is_available=is_available_filter
+    )
     categories = await CategoryService(session).get_all()
 
     response = templates.TemplateResponse(
         request,
         "admin/products.html",
         {
-            "employee":   employee,
-            "flash":      flash,
-            "products":   products,
-            "categories": categories,
+            "employee":            employee,
+            "flash":               flash,
+            "products":            products,
+            "categories":          categories,
+            "filter_category_id":  category_id_filter,
+            "filter_name":         name,
+            "filter_is_available": is_available,
         },
     )
     response.delete_cookie("flash")
@@ -546,16 +588,30 @@ async def delete_product(
 @router.get("/categories", response_class=HTMLResponse)
 async def categories_page(
     request: Request,
+    name: str | None = None,
+    slug: str | None = None,
+    is_active: str | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    categories = await CategoryService(session).get_all()
+    name = name or None
+    slug = slug or None
+    is_active_filter: bool | None = {"true": True, "false": False}.get(is_active or "")
+
+    categories = await CategoryService(session).get_all(name=name, slug=slug, is_active=is_active_filter)
 
     response = templates.TemplateResponse(
         request,
         "admin/categories.html",
-        {"employee": employee, "flash": flash, "categories": categories},
+        {
+            "employee":         employee,
+            "flash":            flash,
+            "categories":       categories,
+            "filter_name":      name,
+            "filter_slug":      slug,
+            "filter_is_active": is_active,
+        },
     )
     response.delete_cookie("flash")
     return response
@@ -619,12 +675,20 @@ async def delete_category(
 @router.get("/employees", response_class=HTMLResponse)
 async def employees_page(
     request: Request,
-    position_id: int | None = None,
+    position_id: str | None = None,
     status: str | None = None,
+    name: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
+    position_id_filter: int | None = int(position_id) if position_id else None
+    name  = name  or None
+    email = email or None
+    phone = phone or None
+
     status_filter: EmployeeStatus | None = None
     if status:
         try:
@@ -633,7 +697,7 @@ async def employees_page(
             pass
 
     employees = await EmployeeService(session).get_all(
-        position_id=position_id, status=status_filter
+        position_id=position_id_filter, status=status_filter, name=name, email=email, phone=phone
     )
     positions = await PositionService(session).get_all()
 
@@ -646,8 +710,11 @@ async def employees_page(
             "employees":          employees,
             "positions":          positions,
             "EmployeeStatus":     EmployeeStatus,
-            "filter_position_id": position_id,
+            "filter_position_id": position_id_filter,
             "filter_status":      status,
+            "filter_name":        name,
+            "filter_email":       email,
+            "filter_phone":       phone,
         },
     )
     response.delete_cookie("flash")

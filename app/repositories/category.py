@@ -16,7 +16,7 @@ class CategoryRepository(BaseRepository[Category]):
         if name is not None:
             query = query.where(Category.name.ilike(f"%{name}%"))
         if slug is not None:
-            query = query.where(Category.slug == slug)
+            query = query.where(Category.slug.ilike(f"%{slug}%"))
         if is_active is not None:
             query = query.where(Category.is_active == is_active)
         result = await self.session.execute(query)
