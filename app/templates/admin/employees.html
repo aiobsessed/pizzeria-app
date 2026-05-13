@@ -35,11 +35,49 @@
     </button>
 </div>
 
+{# Filters #}
+<form method="get" action="/admin/employees" class="flex items-center gap-3 mb-4">
+    <select name="position_id"
+            onchange="this.form.submit()"
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">Все должности</option>
+        {% for pos in positions %}
+        <option value="{{ pos.id }}" {% if filter_position_id == pos.id %}selected{% endif %}>
+            {{ pos.name }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <select name="status"
+            onchange="this.form.submit()"
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">Все статусы</option>
+        {% for s in EmployeeStatus %}
+        <option value="{{ s.value }}" {% if filter_status == s.value %}selected{% endif %}>
+            {{ STATUS_LABELS[s.value] }}
+        </option>
+        {% endfor %}
+    </select>
+
+    {% if filter_position_id or filter_status %}
+    <a href="/admin/employees"
+       class="px-3 py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+        ✕ Сбросить
+    </a>
+    {% endif %}
+</form>
+
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     {% if not employees %}
     <div class="text-center py-16 text-gray-400">
         <p class="text-4xl mb-3">👨‍💼</p>
-        <p class="text-sm">Сотрудников пока нет</p>
+        <p class="text-sm">
+            {% if filter_position_id or filter_status %}
+                Сотрудники с выбранными фильтрами не найдены
+            {% else %}
+                Сотрудников пока нет
+            {% endif %}
+        </p>
     </div>
     {% else %}
     <div class="overflow-x-auto">

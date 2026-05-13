@@ -619,22 +619,35 @@ async def delete_category(
 @router.get("/employees", response_class=HTMLResponse)
 async def employees_page(
     request: Request,
+    position_id: int | None = None,
+    status: str | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    employees = await EmployeeService(session).get_all()
+    status_filter: EmployeeStatus | None = None
+    if status:
+        try:
+            status_filter = EmployeeStatus(status)
+        except ValueError:
+            pass
+
+    employees = await EmployeeService(session).get_all(
+        position_id=position_id, status=status_filter
+    )
     positions = await PositionService(session).get_all()
 
     response = templates.TemplateResponse(
         request,
         "admin/employees.html",
         {
-            "employee":       employee,
-            "flash":          flash,
-            "employees":      employees,
-            "positions":      positions,
-            "EmployeeStatus": EmployeeStatus,
+            "employee":           employee,
+            "flash":              flash,
+            "employees":          employees,
+            "positions":          positions,
+            "EmployeeStatus":     EmployeeStatus,
+            "filter_position_id": position_id,
+            "filter_status":      status,
         },
     )
     response.delete_cookie("flash")

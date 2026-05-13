@@ -21,10 +21,12 @@ class EmployeeService:
         email: str | None = None,
         phone: str | None = None,
         role: str | None = None,
+        position_id: int | None = None,
         status: EmployeeStatus | None = None,
     ) -> list[Employee]:
         return await self.employee_repo.get_all(
-            name=name, email=email, phone=phone, role=role, status=status
+            name=name, email=email, phone=phone,
+            role=role, position_id=position_id, status=status,
         )
 
     async def get_by_id(self, employee_id: int) -> Employee:

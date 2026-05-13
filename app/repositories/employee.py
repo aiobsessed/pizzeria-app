@@ -17,6 +17,7 @@ class EmployeeRepository(BaseRepository[Employee]):
         email: str | None = None,
         phone: str | None = None,
         role: str | None = None,
+        position_id: int | None = None,
         status: EmployeeStatus | None = None,
     ) -> list[Employee]:
         query = select(Employee)
@@ -28,6 +29,8 @@ class EmployeeRepository(BaseRepository[Employee]):
             query = query.where(Employee.phone.ilike(f"%{phone}%"))
         if role is not None:
             query = query.where(Employee.position.has(Position.role == role))
+        if position_id is not None:
+            query = query.where(Employee.position_id == position_id)
         if status is not None:
             query = query.where(Employee.status == status)
         result = await self.session.execute(query)
