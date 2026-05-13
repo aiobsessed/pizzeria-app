@@ -30,6 +30,7 @@ class CartItemRepository(BaseRepository[CartItem]):
             select(CartItem)
             .options(selectinload(CartItem.product).selectinload(Product.category))
             .where(CartItem.cart_id == cart_id)
+            .order_by(CartItem.id)
         )
         return result.scalars().all()
 

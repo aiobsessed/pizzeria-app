@@ -246,7 +246,7 @@ async def update_cart_item(
     except NotFoundError:
         return HTMLResponse("", status_code=404)
 
-    items, total, _ = await CartService(session).get_summary(client.id)
+    items, total, cart_count = await CartService(session).get_summary(client.id)
     updated_item = next((i for i in items if i.id == item_id), None)
     unavailable_names = _cart_unavailable_names(items)
 
@@ -256,8 +256,10 @@ async def update_cart_item(
         {
             "item": updated_item,
             "total": total,
+            "cart_count": cart_count,
             "has_unavailable": bool(unavailable_names),
             "unavailable_names": unavailable_names,
+            "htmx_request": True,
         },
     )
 
@@ -274,7 +276,7 @@ async def delete_cart_item(
     except NotFoundError:
         pass
 
-    items, total, _ = await CartService(session).get_summary(client.id)
+    items, total, cart_count = await CartService(session).get_summary(client.id)
     unavailable_names = _cart_unavailable_names(items)
 
     return templates.TemplateResponse(
@@ -282,6 +284,7 @@ async def delete_cart_item(
         "client/partials/cart_total.html",
         {
             "total": total,
+            "cart_count": cart_count,
             "has_unavailable": bool(unavailable_names),
             "unavailable_names": unavailable_names,
         },

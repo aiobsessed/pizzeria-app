@@ -64,4 +64,5 @@
     <span class="text-xl font-bold text-gray-900 tabular-nums">{{ total | round(2) }} ₽</span>
 </div>
 {% include "client/partials/cart_submit_oob.html" %}
+{% with oob=true %}{% include "client/partials/navbar_counter.html" %}{% endwith %}
 {% endif %}
