@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +35,8 @@ class OrderService:
         delivery_type: DeliveryType | None = None,
         payment_method: PaymentMethod | None = None,
         status: OrderStatus | None = None,
-        created_at: datetime | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> list[Order]:
         return await self.order_repo.get_all_with_items(
             client_id=client_id,
@@ -44,7 +45,8 @@ class OrderService:
             delivery_type=delivery_type,
             payment_method=payment_method,
             status=status,
-            created_at=created_at,
+            date_from=date_from,
+            date_to=date_to,
         )
 
     async def get_by_courier(self, courier_id: int) -> list[Order]:

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
@@ -33,6 +34,7 @@ from app.services import (
 
 router = APIRouter(prefix="/admin", tags=["frontend-admin"])
 
+_MSK = ZoneInfo("Europe/Moscow")
 
 # ── Report helpers ─────────────────────────────────────────────────────────────
 
@@ -54,9 +56,9 @@ class _ReportStats:
 
 def _filter_orders(orders: list[Order], date_from: date | None, date_to: date | None) -> list[Order]:
     if date_from:
-        orders = [o for o in orders if o.created_at.date() >= date_from]
+        orders = [o for o in orders if o.created_at.astimezone(_MSK).date() >= date_from]
     if date_to:
-        orders = [o for o in orders if o.created_at.date() <= date_to]
+        orders = [o for o in orders if o.created_at.astimezone(_MSK).date() <= date_to]
     return orders
 
 
@@ -144,7 +146,7 @@ def _build_excel(orders: list[Order], date_from: date | None, date_to: date | No
         courier_name = order.courier.name if order.courier else "—"
         ws2.append([
             order.id,
-            order.created_at.strftime("%d.%m.%Y %H:%M"),
+            order.created_at.astimezone(_MSK).strftime("%d.%m.%Y %H:%M"),
             order.client.name,
             items_str,
             float(order.total_price),
@@ -242,7 +244,7 @@ def _build_pdf(orders: list[Order], date_from: date | None, date_to: date | None
         items_str = ", ".join(f"{i.product.name} ×{i.quantity}" for i in o.items)
         rows.append([
             str(o.id),
-            o.created_at.strftime("%d.%m.%Y\n%H:%M"),
+            o.created_at.astimezone(_MSK).strftime("%d.%m.%Y\n%H:%M"),
             o.client.name,
             items_str,
             f"{o.total_price:.2f}",
@@ -319,6 +321,8 @@ async def orders_page(
     status: str | None = None,
     delivery_type: str | None = None,
     payment_method: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
@@ -339,6 +343,8 @@ async def orders_page(
         status=status_enum,
         delivery_type=delivery_type_enum,
         payment_method=payment_method_enum,
+        date_from=date_from,
+        date_to=date_to,
     )
     couriers = await EmployeeService(session).get_all(role="courier")
 
@@ -356,6 +362,8 @@ async def orders_page(
             "current_status":         status_enum,
             "current_delivery_type":  delivery_type_enum,
             "current_payment_method": payment_method_enum,
+            "date_from":              date_from,
+            "date_to":                date_to,
         },
     )
     response.delete_cookie("flash")

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,8 @@ async def get_all_orders(
     delivery_type: DeliveryType | None = None,
     payment_method: PaymentMethod | None = None,
     status: OrderStatus | None = None,
-    created_at: datetime | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     session: AsyncSession = Depends(get_db),
     _: Employee = Depends(require_admin),
 ) -> list[Order]:
@@ -32,7 +33,8 @@ async def get_all_orders(
         delivery_type=delivery_type,
         payment_method=payment_method,
         status=status,
-        created_at=created_at,
+        date_from=date_from,
+        date_to=date_to,
     )
 
 

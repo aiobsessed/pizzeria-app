@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,8 @@ class OrderRepository(BaseRepository[Order]):
         delivery_type: DeliveryType | None = None,
         payment_method: PaymentMethod | None = None,
         status: OrderStatus | None = None,
-        created_at: datetime | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> list[Order]:
         query = (
             select(Order)
@@ -45,8 +46,12 @@ class OrderRepository(BaseRepository[Order]):
             query = query.where(Order.payment_method == payment_method)
         if status is not None:
             query = query.where(Order.status == status)
-        if created_at is not None:
-            query = query.where(func.date(Order.created_at) == created_at.date())
+        if date_from is not None or date_to is not None:
+            msk_date = func.date(func.timezone("Europe/Moscow", Order.created_at))
+            if date_from is not None:
+                query = query.where(msk_date >= date_from)
+            if date_to is not None:
+                query = query.where(msk_date <= date_to)
         result = await self.session.execute(query)
         return result.scalars().all()
 
