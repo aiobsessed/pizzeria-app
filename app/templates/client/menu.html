@@ -30,7 +30,11 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
      x-data="{}"
-     x-init="setInterval(() => { const slug = window.location.pathname.match(/\/menu\/([^/]+)/)?.[1]; htmx.ajax('GET', slug ? '/menu/' + slug : '/menu', { target: '#product-grid', swap: 'innerHTML' }); }, 5000)"
+     x-init="setInterval(() => {
+         if (window.__productModalOpen) return;
+         const slug = window.location.pathname.match(/\/menu\/([^/]+)/)?.[1];
+         htmx.ajax('GET', slug ? '/menu/' + slug : '/menu', { target: '#product-grid', swap: 'innerHTML' });
+     }, 5000)"
      @categoryreset.window="history.pushState(null, '', '/menu')">
 
     {% if products or categories %}
@@ -41,7 +45,6 @@
     <div id="category-tabs" class="flex gap-2 flex-wrap mb-8">
         {% include "client/partials/category_tabs.html" %}
     </div>
-
 
     <div id="product-grid">
         {% include "client/partials/product_grid.html" %}

@@ -45,7 +45,10 @@
 
 {# Динамический контент: категории + товары — обновляются поллингом каждые 5s #}
 <div x-data="{}"
-     x-init="setInterval(() => htmx.ajax('GET', '/', { target: '#index-content', swap: 'innerHTML' }), 5000)">
+     x-init="setInterval(() => {
+         if (window.__productModalOpen) return;
+         htmx.ajax('GET', '/', { target: '#index-content', swap: 'innerHTML' });
+     }, 5000)">
 
     <div id="index-content">
         {% include "client/partials/index_htmx.html" %}

@@ -1,5 +1,6 @@
 {% if products %}
 <div x-data="{ selected: null, _snap: {}, _imgUrl: '', qty: 1 }"
+     x-init="$watch('selected', v => window.__productModalOpen = !!v)"
      @open-product.window="selected = $event.detail; _snap = $event.detail; _imgUrl = $event.detail.image_url || '/static/img/placeholder.webp'; qty = 1">
 
     {# ── Product modal ────────────────────────────────────────────────────── #}
@@ -96,7 +97,26 @@
                                         }
                                         const counter = document.getElementById('cart-counter');
                                         if (counter) counter.outerHTML = html;
-                                        if (isSuccess) { selected = null; qty = 1; }
+                                        selected = null;
+                                        qty = 1;
+                                        if (!isSuccess) {
+                                            const path = window.location.pathname;
+                                            const isIndex = path === '/';
+                                            const slug = path.match(/\/menu\/([^/]+)/)?.[1];
+                                            htmx.ajax(
+                                                'GET',
+                                                isIndex ? '/' : (slug ? '/menu/' + slug : '/menu'),
+                                                { target: isIndex ? '#index-content' : '#product-grid', swap: 'innerHTML' }
+                                            );
+                                        }
+                                    })
+                                    .catch(() => {
+                                        document.dispatchEvent(new CustomEvent('showflash', {
+                                            detail: { message: 'Не удалось добавить товар. Попробуйте позже.', success: false },
+                                            bubbles: true,
+                                        }));
+                                        selected = null;
+                                        qty = 1;
                                     });
                                 "
                                 class="px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
