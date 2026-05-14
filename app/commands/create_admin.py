@@ -8,6 +8,8 @@ import asyncio
 import getpass
 import sys
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.security import hash_password
 from app.database.database import db
 from app.models import Employee
@@ -37,7 +39,7 @@ def _prompt_password() -> str:
         return password
 
 
-async def _create_admin() -> None:
+async def _create_admin(session: AsyncSession | None = None) -> None:
     print("\n=== Создание администратора ===\n")
 
     name     = _prompt("Имя")
@@ -46,18 +48,16 @@ async def _create_admin() -> None:
     inn      = _prompt("ИНН (12 цифр)")
     password = _prompt_password()
 
-    async with db.session() as session:
-        employee_repo = EmployeeRepository(session)
-        position_repo = PositionRepository(session)
+    async def _execute(s: AsyncSession) -> None:
+        employee_repo = EmployeeRepository(s)
+        position_repo = PositionRepository(s)
 
         if await employee_repo.get_by_email(email) is not None:
             print(f"\n✗ Сотрудник с email '{email}' уже существует.")
             sys.exit(1)
-
         if await employee_repo.get_by_phone(phone) is not None:
             print(f"\n✗ Сотрудник с телефоном '{phone}' уже существует.")
             sys.exit(1)
-
         if await employee_repo.get_by_inn(inn) is not None:
             print(f"\n✗ Сотрудник с ИНН '{inn}' уже существует.")
             sys.exit(1)
@@ -76,6 +76,12 @@ async def _create_admin() -> None:
             inn=inn,
             hashed_password=hash_password(password),
         ))
+
+    if session is not None:
+        await _execute(session)
+    else:
+        async with db.session() as s:
+            await _execute(s)
 
     print(f"\n✓ Администратор '{name}' ({email}) успешно создан.\n")
 

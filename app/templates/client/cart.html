@@ -37,7 +37,18 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
 
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+    {% if items %}
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Корзина</h1>
+        <button hx-delete="/cart"
+                hx-confirm="Очистить всю корзину?"
+                class="text-sm text-red-400 hover:text-red-600 transition-colors">
+            Очистить корзину
+        </button>
+    </div>
+    {% else %}
     <h1 class="text-2xl font-bold text-gray-900 mb-6">Корзина</h1>
+    {% endif %}
 
     {% if not items %}
     <div class="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">

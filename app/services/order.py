@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,7 +62,8 @@ class OrderService:
         order = await self.get_by_id_with_items(order_id)
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(order, field, value)
-        return await self.order_repo.update(order)
+        await self.order_repo.update(order)
+        return await self.order_repo.get_by_id_with_items(order_id)
 
     async def deliver(self, courier_id: int, order_id: int) -> Order:
         order = await self.order_repo.get_by_id_with_items(order_id)
@@ -73,14 +74,16 @@ class OrderService:
         elif order.status == OrderStatus.canceled:
             raise ConflictError("Order has already been canceled")
         order.status = OrderStatus.delivered
-        return await self.order_repo.update(order)
+        await self.order_repo.update(order)
+        return await self.order_repo.get_by_id_with_items(order_id)
 
     async def cancel(self, order_id: int) -> Order:
         order = await self.get_by_id_with_items(order_id)
         if order.status == OrderStatus.canceled:
             raise ConflictError("Order already canceled")
         order.status = OrderStatus.canceled
-        return await self.order_repo.update(order)
+        await self.order_repo.update(order)
+        return await self.order_repo.get_by_id_with_items(order_id)
 
     # -----------------------
     # Client methods
@@ -147,4 +150,5 @@ class OrderService:
         elif order.status != OrderStatus.accepted:
             raise BusinessError("Cannot cancel the order at this stage")
         order.status = OrderStatus.canceled
-        return await self.order_repo.update(order)
+        await self.order_repo.update(order)
+        return await self.order_repo.get_by_id_with_items(order_id)

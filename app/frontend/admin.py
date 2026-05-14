@@ -54,13 +54,6 @@ class _ReportStats:
     top_products:    list[tuple[str, int]]
 
 
-def _filter_orders(orders: list[Order], date_from: date | None, date_to: date | None) -> list[Order]:
-    if date_from:
-        orders = [o for o in orders if o.created_at.astimezone(_MSK).date() >= date_from]
-    if date_to:
-        orders = [o for o in orders if o.created_at.astimezone(_MSK).date() <= date_to]
-    return orders
-
 
 def _compute_stats(orders: list[Order]) -> _ReportStats:
     delivered = [o for o in orders if o.status == OrderStatus.delivered]
@@ -813,9 +806,8 @@ async def reports_page(
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    all_orders = await OrderService(session).get_all_with_items()
-    orders     = _filter_orders(all_orders, date_from, date_to)
-    stats      = _compute_stats(orders)
+    orders = await OrderService(session).get_all_with_items(date_from=date_from, date_to=date_to)
+    stats  = _compute_stats(orders)
 
     parts = []
     if date_from:
@@ -849,9 +841,8 @@ async def export_excel(
     _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    all_orders = await OrderService(session).get_all_with_items()
-    orders     = _filter_orders(all_orders, date_from, date_to)
-    buf        = _build_excel(orders, date_from, date_to)
+    orders = await OrderService(session).get_all_with_items(date_from=date_from, date_to=date_to)
+    buf    = _build_excel(orders, date_from, date_to)
     filename   = f"report_{date_from or 'all'}_{date_to or 'all'}.xlsx"
     return StreamingResponse(
         buf,
@@ -867,9 +858,8 @@ async def export_pdf(
     _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    all_orders = await OrderService(session).get_all_with_items()
-    orders     = _filter_orders(all_orders, date_from, date_to)
-    pdf_bytes  = _build_pdf(orders, date_from, date_to)
+    orders    = await OrderService(session).get_all_with_items(date_from=date_from, date_to=date_to)
+    pdf_bytes = _build_pdf(orders, date_from, date_to)
     filename   = f"report_{date_from or 'all'}_{date_to or 'all'}.pdf"
     return StreamingResponse(
         BytesIO(pdf_bytes),

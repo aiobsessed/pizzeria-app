@@ -64,6 +64,7 @@
             hx-target="#order-{{ order.id }}"
             hx-swap="outerHTML"
             hx-indicator="#order-{{ order.id }}"
+            hx-confirm="Подтвердить доставку заказа #{{ order.id }}?"
             class="w-full py-3 bg-green-500 hover:bg-green-600 active:bg-green-700
                    text-white text-sm font-semibold rounded-xl transition-colors">
         ✓ Отметить доставленным

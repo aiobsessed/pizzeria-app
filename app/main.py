@@ -1,5 +1,5 @@
-import traceback
 import asyncio
+import traceback
 from contextlib import asynccontextmanager
 
 from alembic import command
@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import routers
+from app.commands.create_admin import _create_admin
 from app.core.config import settings
 from app.core.exceptions import FrontendRedirect
 from app.database.database import db
@@ -25,10 +26,7 @@ async def lifespan(app: FastAPI):
     async with db.session() as session:
         await seed_defaults(session)
         if not await check_admin_exists(session):
-            print("\n" + "=" * 56)
-            print("  ВНИМАНИЕ: в системе нет ни одного администратора.")
-            print("  Запустите: python -m app.commands.create_admin")
-            print("=" * 56 + "\n")
+            await _create_admin(session)
 
     yield
     await db.dispose()

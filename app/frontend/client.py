@@ -263,6 +263,20 @@ async def update_cart_item(
     )
 
 
+@router.delete("/cart", response_class=HTMLResponse)
+async def clear_cart(
+    client: Client = Depends(require_client_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    try:
+        await CartService(session).clear(client.id)
+    except ConflictError:
+        pass
+    response = HTMLResponse("")
+    response.headers["HX-Redirect"] = "/cart"
+    return response
+
+
 @router.delete("/cart/items/{item_id}", response_class=HTMLResponse)
 async def delete_cart_item(
     request: Request,
