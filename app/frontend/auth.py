@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -112,6 +113,8 @@ async def register_submit(
         await ClientService(session).create(
             ClientCreate(name=name, email=email, phone=phone, password=password)
         )
+    except ValidationError:
+        return flash_redirect("/register", "Номер телефона должен содержать только цифры")
     except ConflictError as e:
         return flash_redirect("/register", str(e))
 
