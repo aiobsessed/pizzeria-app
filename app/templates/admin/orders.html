@@ -14,7 +14,7 @@
 {% set DELIVERY_LABELS = {"delivery": "Доставка", "pickup": "Самовывоз"} %}
 {% set PAYMENT_LABELS  = {"cash": "Наличными", "card": "Картой", "online": "Онлайн"} %}
 
-{% set any_filter = current_status or current_delivery_type or current_payment_method or date_from or date_to %}
+{% set any_filter = current_status or current_delivery_type or current_payment_method or current_courier_id or date_from or date_to %}
 
 <div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold text-gray-900">Заказы</h1>
@@ -54,6 +54,17 @@
         {% endfor %}
     </select>
 
+    <select name="courier_id"
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">Все курьеры</option>
+        {% for c in couriers %}
+        <option value="{{ c.id }}" {{ 'selected' if current_courier_id == c.id }}>
+            {{ c.name }}
+        </option>
+        {% endfor %}
+    </select>
+
     <div class="flex items-center gap-1.5">
         <span class="text-xs text-gray-400 whitespace-nowrap">С</span>
         <input type="date" name="date_from"
@@ -70,7 +81,7 @@
                       focus:outline-none focus:ring-2 focus:ring-indigo-400">
     </div>
 
-    <div class="flex gap-2">
+    <div class="flex items-center gap-2 basis-full">
         <button type="submit"
                 class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium
                        rounded-xl transition-colors">

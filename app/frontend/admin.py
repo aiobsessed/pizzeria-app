@@ -1,6 +1,4 @@
-from collections import Counter
-from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
 from zoneinfo import ZoneInfo
@@ -14,6 +12,7 @@ from app.core.enums import DeliveryType, EmployeeStatus, OrderStatus, PaymentMet
 from app.core.exceptions import ConflictError, NotFoundError
 from app.frontend.templates import templates
 from app.models import Employee, Order
+from app.services.report import ReportStats, build_excel, build_pdf, compute_stats
 from app.schemas import (
     CategoryCreate,
     CategoryUpdate,
@@ -36,240 +35,23 @@ router = APIRouter(prefix="/admin", tags=["frontend-admin"])
 
 _MSK = ZoneInfo("Europe/Moscow")
 
-# ── Report helpers ─────────────────────────────────────────────────────────────
 
-_STATUS_LABELS   = {"accepted": "Принят", "preparing": "Готовится", "on_the_way": "В пути", "delivered": "Доставлен", "canceled": "Отменён"}
-_DELIVERY_LABELS = {"delivery": "Доставка", "pickup": "Самовывоз"}
-_PAYMENT_LABELS  = {"cash": "Наличные", "card": "Карта", "online": "Онлайн"}
-
-
-@dataclass
-class _ReportStats:
-    total_orders:    int
-    delivered_count: int
-    cancelled_count: int
-    revenue:         Decimal
-    by_status:       dict
-    by_payment:      dict
-    top_products:    list[tuple[str, int]]
+def _parse_enum(enum_cls, value: str | None):
+    if not value:
+        return None
+    try:
+        return enum_cls(value)
+    except ValueError:
+        return None
 
 
-
-def _compute_stats(orders: list[Order]) -> _ReportStats:
-    delivered = [o for o in orders if o.status == OrderStatus.delivered]
-    qty: Counter = Counter()
-    for order in orders:
-        for item in order.items:
-            qty[item.product.name] += item.quantity
-    return _ReportStats(
-        total_orders    = len(orders),
-        delivered_count = len(delivered),
-        cancelled_count = sum(1 for o in orders if o.status == OrderStatus.canceled),
-        revenue         = sum((o.total_price for o in delivered), Decimal(0)),
-        by_status       = {s: sum(1 for o in orders if o.status == s) for s in OrderStatus},
-        by_payment      = {m: sum(1 for o in orders if o.payment_method == m) for m in PaymentMethod},
-        top_products    = qty.most_common(10),
-    )
-
-
-def _build_excel(orders: list[Order], date_from: date | None, date_to: date | None) -> BytesIO:
-    import openpyxl
-    from openpyxl.styles import Alignment, Font, PatternFill
-
-    INDIGO   = PatternFill("solid", fgColor="4F46E5")
-    WHITE_FG = Font(color="FFFFFF", bold=True)
-    CENTER   = Alignment(horizontal="center", vertical="center", wrap_text=True)
-
-    wb = openpyxl.Workbook()
-    stats = _compute_stats(orders)
-    period = f"{date_from or 'начало'} — {date_to or 'конец'}"
-
-    ws = wb.active
-    ws.title = "Сводка"
-
-    ws.append(["Отчёт пиццерии", period])
-    ws["A1"].font = Font(bold=True, size=14)
-    ws.append([])
-
-    for label, value in [
-        ("Всего заказов",             stats.total_orders),
-        ("Доставлено",                stats.delivered_count),
-        ("Отменено",                  stats.cancelled_count),
-        ("Выручка (доставленные), ₽", float(stats.revenue)),
-    ]:
-        ws.append([label, value])
-
-    ws.append([])
-    ws.append(["Статус", "Количество"])
-    for cell in ws[ws.max_row]:
-        cell.fill = INDIGO
-        cell.font = WHITE_FG
-    for status, cnt in stats.by_status.items():
-        ws.append([_STATUS_LABELS[status.value], cnt])
-
-    ws.append([])
-    ws.append(["Способ оплаты", "Количество"])
-    for cell in ws[ws.max_row]:
-        cell.fill = INDIGO
-        cell.font = WHITE_FG
-    for method, cnt in stats.by_payment.items():
-        ws.append([_PAYMENT_LABELS[method.value], cnt])
-
-    ws.append([])
-    ws.append(["Товар", "Продано (шт.)"])
-    for cell in ws[ws.max_row]:
-        cell.fill = INDIGO
-        cell.font = WHITE_FG
-    for name, qty in stats.top_products:
-        ws.append([name, qty])
-
-    ws.column_dimensions["A"].width = 35
-    ws.column_dimensions["B"].width = 20
-
-    ws2 = wb.create_sheet("Заказы")
-    headers = ["#", "Дата", "Клиент", "Позиции", "Итого, ₽", "Статус", "Доставка", "Оплата", "Курьер"]
-    ws2.append(headers)
-    for cell in ws2[1]:
-        cell.fill = INDIGO
-        cell.font = WHITE_FG
-        cell.alignment = CENTER
-
-    for order in orders:
-        items_str = ", ".join(f"{i.product.name} ×{i.quantity}" for i in order.items)
-        courier_name = order.courier.name if order.courier else "—"
-        ws2.append([
-            order.id,
-            order.created_at.astimezone(_MSK).strftime("%d.%m.%Y %H:%M"),
-            order.client.name,
-            items_str,
-            float(order.total_price),
-            _STATUS_LABELS[order.status.value],
-            _DELIVERY_LABELS[order.delivery_type.value],
-            _PAYMENT_LABELS[order.payment_method.value],
-            courier_name,
-        ])
-
-    for col, width in zip("ABCDEFGHI", [6, 18, 22, 55, 14, 14, 14, 12, 20]):
-        ws2.column_dimensions[col].width = width
-
-    buf = BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-    return buf
-
-
-def _get_cyrillic_font() -> str:
-    import os
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-
-    candidates = [
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "C:\\Windows\\Fonts\\arial.ttf",
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            pdfmetrics.registerFont(TTFont("CyrFont", path))
-            return "CyrFont"
-    return "Helvetica"
-
-
-def _build_pdf(orders: list[Order], date_from: date | None, date_to: date | None) -> bytes:
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.units import mm
-    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-
-    INDIGO     = colors.HexColor("#4F46E5")
-    INDIGO_LT  = colors.HexColor("#EEF2FF")
-    GRID_COLOR = colors.HexColor("#C7D2FE")
-    ROW_ALT    = colors.HexColor("#F5F3FF")
-    font       = _get_cyrillic_font()
-
-    def _style(name: str, **kw) -> ParagraphStyle:
-        return ParagraphStyle(name, fontName=font, **kw)
-
-    buf = BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
-                            rightMargin=15*mm, leftMargin=15*mm,
-                            topMargin=15*mm, bottomMargin=15*mm)
-
-    stats  = _compute_stats(orders)
-    period = f"{date_from or 'начало'} — {date_to or 'конец'}"
-
-    story: list = []
-    story.append(Paragraph(f"Отчёт пиццерии  |  Период: {period}",
-                            _style("title", fontSize=15, spaceAfter=5)))
-    story.append(Spacer(1, 5*mm))
-
-    summary_data = [
-        ["Всего заказов", "Доставлено", "Отменено", "Выручка, ₽"],
-        [str(stats.total_orders), str(stats.delivered_count),
-         str(stats.cancelled_count), f"{stats.revenue:.2f}"],
-    ]
-    w = 62*mm
-    t_summary = Table(summary_data, colWidths=[w, w, w, w])
-    t_summary.setStyle(TableStyle([
-        ("FONTNAME",      (0, 0), (-1, -1), font),
-        ("BACKGROUND",    (0, 0), (-1, 0),  INDIGO),
-        ("TEXTCOLOR",     (0, 0), (-1, 0),  colors.white),
-        ("BACKGROUND",    (0, 1), (-1, 1),  INDIGO_LT),
-        ("FONTSIZE",      (0, 0), (-1, 0),  9),
-        ("FONTSIZE",      (0, 1), (-1, 1),  14),
-        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-        ("BOX",           (0, 0), (-1, -1), 0.5, GRID_COLOR),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.5, GRID_COLOR),
-        ("TOPPADDING",    (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
-    story.append(t_summary)
-    story.append(Spacer(1, 7*mm))
-    story.append(Paragraph("Заказы", _style("h2", fontSize=11, spaceBefore=4, spaceAfter=4)))
-
-    col_widths = [12*mm, 26*mm, 33*mm, 88*mm, 22*mm, 22*mm, 22*mm, 22*mm]
-    rows = [["#", "Дата", "Клиент", "Позиции", "Итого, ₽", "Статус", "Доставка", "Оплата"]]
-    for o in orders:
-        items_str = ", ".join(f"{i.product.name} ×{i.quantity}" for i in o.items)
-        rows.append([
-            str(o.id),
-            o.created_at.astimezone(_MSK).strftime("%d.%m.%Y\n%H:%M"),
-            o.client.name,
-            items_str,
-            f"{o.total_price:.2f}",
-            _STATUS_LABELS[o.status.value],
-            _DELIVERY_LABELS[o.delivery_type.value],
-            _PAYMENT_LABELS[o.payment_method.value],
-        ])
-
-    base_cmds = [
-        ("FONTNAME",      (0, 0), (-1, -1), font),
-        ("FONTSIZE",      (0, 0), (-1, -1), 8),
-        ("BACKGROUND",    (0, 0), (-1, 0),  INDIGO),
-        ("TEXTCOLOR",     (0, 0), (-1, 0),  colors.white),
-        ("ALIGN",         (0, 0), (-1, 0),  "CENTER"),
-        ("ALIGN",         (4, 1), (4, -1),  "RIGHT"),
-        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-        ("BOX",           (0, 0), (-1, -1), 0.5, GRID_COLOR),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.25, GRID_COLOR),
-        ("TOPPADDING",    (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-    ]
-    alt_cmds = [
-        ("BACKGROUND", (0, i), (-1, i), ROW_ALT)
-        for i in range(2, len(rows), 2)
-    ]
-
-    t_orders = Table(rows, colWidths=col_widths, repeatRows=1)
-    t_orders.setStyle(TableStyle(base_cmds + alt_cmds))
-    story.append(t_orders)
-
-    doc.build(story)
-    return buf.getvalue()
+def _parse_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -282,23 +64,36 @@ async def dashboard(
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    orders   = await OrderService(session).get_all_with_items()
-    clients  = await ClientService(session).get_all()
-    products = await ProductService(session).get_all()
-    couriers = await EmployeeService(session).get_all(role="courier")
+    today = datetime.now(_MSK).date()
+
+    today_orders, active_couriers, positions = (
+        await OrderService(session).get_all_with_items(date_from=today, date_to=today),
+        await EmployeeService(session).get_all(role="courier", status=EmployeeStatus.active),
+        await PositionService(session).get_all(),
+    )
+
+    courier_position    = next((p for p in positions if p.role == "courier"), None)
+    today_by_status     = {s: sum(1 for o in today_orders if o.status == s) for s in OrderStatus}
+    today_revenue       = sum(o.total_price for o in today_orders if o.status == OrderStatus.delivered)
+    in_progress         = sum(
+        today_by_status[s]
+        for s in (OrderStatus.accepted, OrderStatus.preparing, OrderStatus.on_the_way)
+    )
 
     response = templates.TemplateResponse(
         request,
         "admin/dashboard.html",
         {
-            "employee":         employee,
-            "flash":            flash,
-            "orders_count":     len(orders),
-            "clients_count":    len(clients),
-            "products_count":   len(products),
-            "couriers_count":   len(couriers),
-            "orders_by_status": {s: sum(1 for o in orders if o.status == s) for s in OrderStatus},
-            "OrderStatus":      OrderStatus,
+            "employee":              employee,
+            "flash":                 flash,
+            "today":                 today,
+            "today_orders_count":    len(today_orders),
+            "today_by_status":       today_by_status,
+            "today_revenue":         today_revenue,
+            "in_progress":           in_progress,
+            "active_couriers_count": len(active_couriers),
+            "courier_position_id":   courier_position.id if courier_position else None,
+            "OrderStatus":           OrderStatus,
         },
     )
     response.delete_cookie("flash")
@@ -314,30 +109,27 @@ async def orders_page(
     status: str | None = None,
     delivery_type: str | None = None,
     payment_method: str | None = None,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    courier_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    def _parse_enum(enum_cls, value: str | None):
-        if not value:
-            return None
-        try:
-            return enum_cls(value)
-        except ValueError:
-            return None
-
     status_enum         = _parse_enum(OrderStatus, status)
     delivery_type_enum  = _parse_enum(DeliveryType, delivery_type)
     payment_method_enum = _parse_enum(PaymentMethod, payment_method)
+    courier_id_int      = int(courier_id) if courier_id else None
+    date_from_parsed    = _parse_date(date_from)
+    date_to_parsed      = _parse_date(date_to)
 
     orders   = await OrderService(session).get_all_with_items(
         status=status_enum,
         delivery_type=delivery_type_enum,
         payment_method=payment_method_enum,
-        date_from=date_from,
-        date_to=date_to,
+        courier_id=courier_id_int,
+        date_from=date_from_parsed,
+        date_to=date_to_parsed,
     )
     couriers = await EmployeeService(session).get_all(role="courier")
 
@@ -355,8 +147,9 @@ async def orders_page(
             "current_status":         status_enum,
             "current_delivery_type":  delivery_type_enum,
             "current_payment_method": payment_method_enum,
-            "date_from":              date_from,
-            "date_to":                date_to,
+            "current_courier_id":     courier_id_int,
+            "date_from":              date_from_parsed,
+            "date_to":                date_to_parsed,
         },
     )
     response.delete_cookie("flash")
@@ -676,6 +469,7 @@ async def delete_category(
 @router.get("/employees", response_class=HTMLResponse)
 async def employees_page(
     request: Request,
+    role: str | None = None,
     position_id: str | None = None,
     status: str | None = None,
     name: str | None = None,
@@ -685,20 +479,20 @@ async def employees_page(
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    position_id_filter: int | None = int(position_id) if position_id else None
+    role_filter         = role or None
+    position_id_filter  = int(position_id) if position_id else None
+    status_filter       = _parse_enum(EmployeeStatus, status)
     name  = name  or None
     email = email or None
     phone = phone or None
 
-    status_filter: EmployeeStatus | None = None
-    if status:
-        try:
-            status_filter = EmployeeStatus(status)
-        except ValueError:
-            pass
-
     employees = await EmployeeService(session).get_all(
-        position_id=position_id_filter, status=status_filter, name=name, email=email, phone=phone
+        role=role_filter,
+        position_id=position_id_filter,
+        status=status_filter,
+        name=name,
+        email=email,
+        phone=phone,
     )
     positions = await PositionService(session).get_all()
 
@@ -711,6 +505,7 @@ async def employees_page(
             "employees":          employees,
             "positions":          positions,
             "EmployeeStatus":     EmployeeStatus,
+            "filter_role":        role_filter,
             "filter_position_id": position_id_filter,
             "filter_status":      status,
             "filter_name":        name,
@@ -800,20 +595,22 @@ async def delete_employee(
 @router.get("/reports", response_class=HTMLResponse)
 async def reports_page(
     request: Request,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     employee: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
-    orders = await OrderService(session).get_all_with_items(date_from=date_from, date_to=date_to)
-    stats  = _compute_stats(orders)
+    date_from_parsed = _parse_date(date_from)
+    date_to_parsed   = _parse_date(date_to)
+    orders = await OrderService(session).get_all_with_items(date_from=date_from_parsed, date_to=date_to_parsed)
+    stats  = compute_stats(orders)
 
     parts = []
-    if date_from:
-        parts.append(f"date_from={date_from}")
-    if date_to:
-        parts.append(f"date_to={date_to}")
+    if date_from_parsed:
+        parts.append(f"date_from={date_from_parsed}")
+    if date_to_parsed:
+        parts.append(f"date_to={date_to_parsed}")
     export_qs = "?" + "&".join(parts) if parts else ""
 
     response = templates.TemplateResponse(
@@ -823,8 +620,8 @@ async def reports_page(
             "employee":      employee,
             "flash":         flash,
             "stats":         stats,
-            "date_from":     date_from,
-            "date_to":       date_to,
+            "date_from":     date_from_parsed,
+            "date_to":       date_to_parsed,
             "export_qs":     export_qs,
             "OrderStatus":   OrderStatus,
             "PaymentMethod": PaymentMethod,
@@ -836,14 +633,16 @@ async def reports_page(
 
 @router.get("/reports/export/excel")
 async def export_excel(
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    orders = await OrderService(session).get_all_with_items(date_from=date_from, date_to=date_to)
-    buf    = _build_excel(orders, date_from, date_to)
-    filename   = f"report_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+    date_from_parsed = _parse_date(date_from)
+    date_to_parsed   = _parse_date(date_to)
+    orders   = await OrderService(session).get_all_with_items(date_from=date_from_parsed, date_to=date_to_parsed)
+    buf      = build_excel(orders, date_from_parsed, date_to_parsed)
+    filename = f"report_{date_from_parsed or 'all'}_{date_to_parsed or 'all'}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -853,14 +652,16 @@ async def export_excel(
 
 @router.get("/reports/export/pdf")
 async def export_pdf(
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    orders    = await OrderService(session).get_all_with_items(date_from=date_from, date_to=date_to)
-    pdf_bytes = _build_pdf(orders, date_from, date_to)
-    filename   = f"report_{date_from or 'all'}_{date_to or 'all'}.pdf"
+    date_from_parsed = _parse_date(date_from)
+    date_to_parsed   = _parse_date(date_to)
+    orders    = await OrderService(session).get_all_with_items(date_from=date_from_parsed, date_to=date_to_parsed)
+    pdf_bytes = build_pdf(orders, date_from_parsed, date_to_parsed)
+    filename  = f"report_{date_from_parsed or 'all'}_{date_to_parsed or 'all'}.pdf"
     return StreamingResponse(
         BytesIO(pdf_bytes),
         media_type="application/pdf",
