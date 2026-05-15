@@ -1,0 +1,26 @@
+{#
+  Partial: courier/partials/orders_list.html
+  Используется:
+    - SSR через {% include %} в courier/index.html
+    - HTMX-поллинг GET /courier/orders → swap #courier-orders innerHTML
+  Контекст: orders, OrderStatus
+#}
+{% if not orders %}
+<div class="text-center py-16">
+    <p class="text-5xl mb-4">🛵</p>
+    <p class="text-gray-500 font-medium">Нет активных заказов</p>
+    <p class="text-sm text-gray-400 mt-1">Новые заказы появятся здесь</p>
+</div>
+{% else %}
+<div class="space-y-4">
+    {% for order in orders %}
+    {% include "courier/partials/order_card.html" %}
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if show_counter_oob %}
+{% with active_count=orders|length, oob=true %}
+{% include "courier/partials/counter.html" %}
+{% endwith %}
+{% endif %}

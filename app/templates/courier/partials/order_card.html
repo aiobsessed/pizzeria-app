@@ -1,9 +1,9 @@
 {#
   Partial: courier/partials/order_card.html
   Используется:
-    - SSR через {% include %} в courier/index.html
+    - SSR через {% include %} в courier/partials/orders_list.html
     - HTMX-своп после POST /courier/orders/{id}/deliver
-  Контекст: order, OrderStatus
+  Контекст: order, OrderStatus, active_count (только при deliver-свопе)
 #}
 <div id="order-{{ order.id }}"
      class="bg-white rounded-2xl border {% if order.status == OrderStatus.delivered %}border-green-200 opacity-60{% else %}border-gray-100{% endif %} shadow-sm p-4 space-y-3">
@@ -37,6 +37,9 @@
         <span>{{ order.address.city }}, {{ order.address.street }}, д. {{ order.address.house }}
         {% if order.address.apartment %}, кв. {{ order.address.apartment }}{% endif %}</span>
     </div>
+    {% if order.address.comment %}
+    <p class="text-sm italic text-amber-700 bg-amber-50 rounded-lg px-3 py-2">💬 {{ order.address.comment }}</p>
+    {% endif %}
     {% else %}
     <div class="flex items-center gap-2 text-sm text-gray-500">
         <span class="text-gray-400">🏠</span>
@@ -72,3 +75,9 @@
     {% endif %}
 
 </div>
+
+{% if active_count is defined %}
+{% with oob=true %}
+{% include "courier/partials/counter.html" %}
+{% endwith %}
+{% endif %}

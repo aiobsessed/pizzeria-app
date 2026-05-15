@@ -1,0 +1,13 @@
+{#
+  Partial: courier/partials/counter.html
+  Используется:
+    - SSR через {% include %} в courier/index.html (без oob)
+    - OOB-своп в orders_list.html и order_card.html (oob=true)
+  Контекст: active_count, oob (опционально)
+#}
+<div id="courier-counter"
+     {% if oob %}hx-swap-oob="outerHTML"{% endif %}
+     class="h-9 w-9 flex items-center justify-center rounded-full
+            bg-indigo-600 text-white text-sm font-bold shadow-sm">
+    {{ active_count }}
+</div>
