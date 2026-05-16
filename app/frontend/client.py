@@ -368,6 +368,49 @@ async def create_order(
     return flash_redirect("/orders", "Заказ успешно оформлен!", success=True)
 
 
+@router.post("/orders/{order_id}/repeat", response_class=HTMLResponse)
+async def repeat_order(
+    request: Request,
+    order_id: int,
+    client: Client = Depends(require_client_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    try:
+        order = await OrderService(session).get_own_order(client.id, order_id)
+    except NotFoundError:
+        return HTMLResponse("", status_code=404)
+
+    cart_service = CartService(session)
+    added, skipped = 0, 0
+
+    for item in order.items:
+        try:
+            await cart_service.add_item(
+                client.id, CartItemCreate(product_id=item.product_id, quantity=item.quantity)
+            )
+            added += 1
+        except BusinessError:
+            skipped += 1
+
+    _, _, cart_count = await cart_service.get_summary(client.id)
+    response = templates.TemplateResponse(
+        request, "client/partials/navbar_counter.html", {"cart_count": cart_count}
+    )
+
+    if added == 0:
+        _htmx_flash(response, "Товары из этого заказа сейчас недоступны")
+    elif skipped:
+        _htmx_flash(
+            response,
+            f"Добавлено {added} из {added + skipped} товаров — часть недоступна",
+            success=True,
+        )
+    else:
+        _htmx_flash(response, "Товары добавлены в корзину", success=True)
+
+    return response
+
+
 @router.patch("/orders/{order_id}/cancel", response_class=HTMLResponse)
 async def cancel_order(
     request: Request,

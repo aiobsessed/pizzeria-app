@@ -96,9 +96,17 @@
                     {% if order.delivery_type.value == "delivery" %}🚗 Доставка{% else %}🏪 Самовывоз{% endif %}
                     · {{ {"cash": "Наличными", "card": "Картой", "online": "Онлайн"}[order.payment_method.value] }}
                 </span>
-                <span class="text-sm font-bold text-gray-900 tabular-nums">
-                    {{ order.total_price }} ₽
-                </span>
+                <div class="flex items-center gap-4">
+                    <button hx-post="/orders/{{ order.id }}/repeat"
+                            hx-target="#cart-counter"
+                            hx-swap="outerHTML"
+                            class="text-xs font-medium text-orange-500 hover:text-orange-600 transition-colors">
+                        Повторить заказ
+                    </button>
+                    <span class="text-sm font-bold text-gray-900 tabular-nums">
+                        {{ order.total_price }} ₽
+                    </span>
+                </div>
             </div>
 
         </div>

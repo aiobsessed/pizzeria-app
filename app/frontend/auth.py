@@ -115,6 +115,8 @@ async def register_submit(
         )
     except ValidationError:
         return flash_redirect("/register", "Номер телефона должен содержать только цифры")
+    except ValueError as e:
+        return flash_redirect("/register", str(e))
     except ConflictError as e:
         return flash_redirect("/register", str(e))
 
