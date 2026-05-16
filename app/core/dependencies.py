@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .enums import EmployeeStatus
 from .exceptions import AuthError, FrontendRedirect
 from .security import verify_token
 from app.database.database import db
@@ -137,7 +138,7 @@ async def require_admin_from_cookie(
         raise FrontendRedirect("/staff/login")
 
     employee = await EmployeeRepository(session).get_by_id(int(payload["sub"]))
-    if employee is None:
+    if employee is None or employee.status != EmployeeStatus.active:
         raise FrontendRedirect("/staff/login")
     return employee
 
@@ -162,6 +163,6 @@ async def require_courier_from_cookie(
         raise FrontendRedirect("/staff/login")
 
     employee = await EmployeeRepository(session).get_by_id(int(payload["sub"]))
-    if employee is None:
+    if employee is None or employee.status != EmployeeStatus.active:
         raise FrontendRedirect("/staff/login")
     return employee

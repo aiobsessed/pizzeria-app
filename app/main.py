@@ -52,8 +52,13 @@ app.include_router(courier_router)
 @app.exception_handler(FrontendRedirect)
 async def frontend_redirect_handler(request: Request, exc: FrontendRedirect) -> HTMLResponse | RedirectResponse:
     if request.headers.get("HX-Request"):
-        return HTMLResponse("", status_code=401)
-    return RedirectResponse(url=exc.url, status_code=302)
+        response = HTMLResponse("", status_code=401)
+        response.headers["HX-Redirect"] = exc.url
+        response.delete_cookie("access_token")
+        return response
+    response = RedirectResponse(url=exc.url, status_code=302)
+    response.delete_cookie("access_token")
+    return response
 
 
 @app.exception_handler(403)
