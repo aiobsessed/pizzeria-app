@@ -18,5 +18,6 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(50), unique=True)
     slug: Mapped[str] = mapped_column(String(50), unique=True)
     is_active: Mapped[bool] = mapped_column(default=True, server_default=true())
+    position: Mapped[int] = mapped_column(default=0, server_default="0")
 
     products: Mapped[list[Product]] = relationship(back_populates="category")

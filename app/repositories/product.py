@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .base import BaseRepository
@@ -22,7 +22,7 @@ class ProductRepository(BaseRepository[Product]):
             query = query.where(Product.name.ilike(f"%{name}%"))
         if is_available is not None:
             query = query.where(Product.is_available == is_available)
-        result = await self.session.execute(query)
+        result = await self.session.execute(query.order_by(Product.position, Product.id))
         return result.scalars().all()
 
     async def get_all_available(self) -> list[Product]:
@@ -30,6 +30,7 @@ class ProductRepository(BaseRepository[Product]):
             select(Product)
             .join(Category, Product.category_id == Category.id)
             .where(Product.is_available, Category.is_active)
+            .order_by(Category.position, Category.id, Product.position, Product.id)
         )
         result = await self.session.execute(query)
         return result.scalars().all()
@@ -43,6 +44,7 @@ class ProductRepository(BaseRepository[Product]):
             select(Product)
             .join(Category, Product.category_id == Category.id)
             .where(Product.category_id == category_id, Product.is_available, Category.is_active)
+            .order_by(Product.position, Product.id)
         )
         result = await self.session.execute(query)
         return result.scalars().all()
@@ -55,3 +57,10 @@ class ProductRepository(BaseRepository[Product]):
         )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
+
+    async def bulk_reorder(self, items: list[tuple[int, int]]) -> None:
+        for item_id, position in items:
+            await self.session.execute(
+                update(Product).where(Product.id == item_id).values(position=position)
+            )
+        await self.session.flush()

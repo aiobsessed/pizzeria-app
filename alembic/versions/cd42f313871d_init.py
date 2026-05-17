@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 5eec487c8740
+Revision ID: cd42f313871d
 Revises: 
-Create Date: 2026-05-14 11:13:46.277607
+Create Date: 2026-05-16 23:32:54.802442
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '5eec487c8740'
+revision: str = 'cd42f313871d'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,6 +26,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=50), nullable=False),
     sa.Column('slug', sa.String(length=50), nullable=False),
     sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+    sa.Column('position', sa.Integer(), server_default='0', nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name'),
     sa.UniqueConstraint('slug')
@@ -94,6 +95,7 @@ def upgrade() -> None:
     sa.Column('price', sa.Numeric(precision=10, scale=2), nullable=False),
     sa.Column('image_url', sa.String(length=500), nullable=True),
     sa.Column('is_available', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+    sa.Column('position', sa.Integer(), server_default='0', nullable=False),
     sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')

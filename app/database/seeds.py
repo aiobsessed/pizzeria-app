@@ -17,28 +17,12 @@ _SEED_CATALOG = [
         "category": {"name": "Пиццы", "slug": "pizza"},
         "products": [
             {
-                "name": "Пицца Маргарита",
-                "description": "Томатный соус, моцарелла фиор ди латте, свежий базилик",
-                "composition": "тесто, томатный соус, моцарелла, базилик, оливковое масло",
-                "weight": 450,
-                "price": Decimal("599.00"),
-                "image_url": "/static/img/pizza_margarita.webp",
-            },
-            {
-                "name": "Пицца Пепперони",
-                "description": "Острая пепперони, томатный соус, моцарелла",
-                "composition": "тесто, томатный соус, моцарелла, пепперони",
-                "weight": 480,
-                "price": Decimal("699.00"),
-                "image_url": "/static/img/pizza_pepperoni.webp",
-            },
-            {
-                "name": "Пицца BBQ",
-                "description": "Куриное филе, соус барбекю, красный лук, моцарелла",
-                "composition": "тесто, соус BBQ, куриное филе, моцарелла, красный лук, болгарский перец",
-                "weight": 500,
-                "price": Decimal("749.00"),
-                "image_url": "/static/img/pizza_bbq.webp",
+                "name": "Пицца Гавайская",
+                "description": "Куриное филе, ананасы, томатный соус, моцарелла",
+                "composition": "тесто, томатный соус, куриное филе, ананасы, моцарелла",
+                "weight": 460,
+                "price": Decimal("649.00"),
+                "image_url": "/static/img/pizza_hawaii.webp",
             },
             {
                 "name": "Пицца Четыре сыра",
@@ -49,12 +33,28 @@ _SEED_CATALOG = [
                 "image_url": "/static/img/pizza_four_cheese.webp",
             },
             {
-                "name": "Пицца Гавайская",
-                "description": "Куриное филе, ананасы, томатный соус, моцарелла",
-                "composition": "тесто, томатный соус, куриное филе, ананасы, моцарелла",
-                "weight": 460,
-                "price": Decimal("649.00"),
-                "image_url": "/static/img/pizza_hawaii.webp",
+                "name": "Пицца BBQ",
+                "description": "Куриное филе, соус барбекю, красный лук, моцарелла",
+                "composition": "тесто, соус BBQ, куриное филе, моцарелла, красный лук, болгарский перец",
+                "weight": 500,
+                "price": Decimal("749.00"),
+                "image_url": "/static/img/pizza_bbq.webp",
+            },
+            {
+                "name": "Пицца Пепперони",
+                "description": "Острая пепперони, томатный соус, моцарелла",
+                "composition": "тесто, томатный соус, моцарелла, пепперони",
+                "weight": 480,
+                "price": Decimal("699.00"),
+                "image_url": "/static/img/pizza_pepperoni.webp",
+            },
+            {
+                "name": "Пицца Маргарита",
+                "description": "Томатный соус, моцарелла фиор ди латте, свежий базилик",
+                "composition": "тесто, томатный соус, моцарелла, базилик, оливковое масло",
+                "weight": 450,
+                "price": Decimal("599.00"),
+                "image_url": "/static/img/pizza_margarita.webp",
             },
         ],
     },
@@ -102,18 +102,23 @@ async def seed_defaults(session: AsyncSession) -> None:
             session.add(Position(**pos_data))
     await session.flush()
 
-    for entry in _SEED_CATALOG:
+    for cat_position, entry in enumerate(_SEED_CATALOG):
         cat_data = entry["category"]
         category = await session.scalar(select(Category).where(Category.slug == cat_data["slug"]))
         if category is None:
-            category = Category(**cat_data, is_active=False)
+            category = Category(**cat_data, is_active=False, position=cat_position)
             session.add(category)
             await session.flush()
 
-        for prod_data in entry["products"]:
+        for prod_position, prod_data in enumerate(entry["products"]):
             exists = await session.scalar(select(Product).where(Product.name == prod_data["name"]))
             if exists is None:
-                session.add(Product(**prod_data, category_id=category.id, is_available=False))
+                session.add(Product(
+                    **prod_data,
+                    category_id=category.id,
+                    is_available=False,
+                    position=prod_position,
+                ))
 
     await session.commit()
 

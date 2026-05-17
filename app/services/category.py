@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import Category
 from app.schemas import CategoryCreate, CategoryUpdate
+from app.schemas.reorder import ReorderItem
 from app.repositories import CategoryRepository
 
 
@@ -51,6 +52,9 @@ class CategoryService:
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(category, field, value)
         return await self.category_repo.update(category)
+
+    async def reorder(self, items: list[ReorderItem]) -> None:
+        await self.category_repo.bulk_reorder([(item.id, item.position) for item in items])
 
     async def delete(self, category_id: int) -> None:
         """Soft delete — помечает категорию неактивной вместо физического удаления."""

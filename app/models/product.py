@@ -22,5 +22,6 @@ class Product(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     image_url: Mapped[str | None] = mapped_column(String(500))
     is_available: Mapped[bool] = mapped_column(default=True, server_default=true())
+    position: Mapped[int] = mapped_column(default=0, server_default="0")
 
     category: Mapped[Category] = relationship(back_populates="products")

@@ -62,26 +62,41 @@
     </div>
 </form>
 
+{% if any_filter %}
+<p class="text-xs text-amber-600 mb-3 flex items-center gap-1.5">
+    <span>⚠</span> Фильтры активны — перетаскивание недоступно. Сбросьте фильтры, чтобы изменить порядок.
+</p>
+{% else %}
+<p class="text-xs text-gray-400 mb-3 flex items-center gap-1.5">
+    <span>⇅</span> Перетащите строки, чтобы изменить порядок отображения.
+</p>
+{% endif %}
+
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     {% if not categories %}
     <div class="text-center py-16 text-gray-400">
         <p class="text-4xl mb-3">🗂</p>
-        <p class="text-sm">{{ 'Категории с выбранными фильтрами не найдены' if any_filter else 'Категорий пока нет' }}</p>    </div>
+        <p class="text-sm">{{ 'Категории с выбранными фильтрами не найдены' if any_filter else 'Категорий пока нет' }}</p>
+    </div>
     {% else %}
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-100">
             <tr>
-                <th class="text-left font-medium text-gray-500 px-4 py-3">#</th>
+                <th class="w-8 px-3 py-3"></th>
                 <th class="text-left font-medium text-gray-500 px-4 py-3">Название</th>
                 <th class="text-left font-medium text-gray-500 px-4 py-3">Slug</th>
                 <th class="text-left font-medium text-gray-500 px-4 py-3">Статус</th>
                 <th class="px-4 py-3"></th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-50">
+        <tbody id="categories-sortable" class="divide-y divide-gray-50">
             {% for cat in categories %}
-            <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-4 py-3 font-mono text-gray-400">{{ cat.id }}</td>
+            <tr class="hover:bg-gray-50 transition-colors" data-id="{{ cat.id }}">
+                <td class="px-3 py-3 select-none text-center text-base
+                           {% if not any_filter %}drag-handle cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400
+                           {% else %}text-gray-200 cursor-not-allowed{% endif %}">
+                    ⠿
+                </td>
                 <td class="px-4 py-3 text-gray-900 font-medium">{{ cat.name }}</td>
                 <td class="px-4 py-3 font-mono text-gray-500 text-xs">{{ cat.slug }}</td>
                 <td class="px-4 py-3">
@@ -160,5 +175,47 @@
 </div>
 
 </div>{# end x-data #}
+
+{# Reorder toast #}
+<div id="reorder-toast"
+     class="fixed bottom-6 right-6 z-50 px-4 py-2.5 bg-gray-900 text-white text-sm rounded-xl shadow-lg
+            opacity-0 transition-opacity duration-300 pointer-events-none">
+    ✓ Порядок сохранён
+</div>
+
+{% if not any_filter %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script>
+(function () {
+    const tbody = document.getElementById('categories-sortable');
+    if (!tbody) return;
+
+    const toast = document.getElementById('reorder-toast');
+    let toastTimer;
+
+    function showToast() {
+        clearTimeout(toastTimer);
+        toast.style.opacity = '1';
+        toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+    }
+
+    new Sortable(tbody, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'opacity-50',
+        onEnd() {
+            const items = [...tbody.querySelectorAll('tr[data-id]')]
+                .map((tr, index) => ({ id: +tr.dataset.id, position: index }));
+
+            fetch('/admin/categories/reorder', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(items),
+            }).then(r => { if (r.ok) showToast(); });
+        },
+    });
+})();
+</script>
+{% endif %}
 
 {% endblock %}

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import Product
 from app.schemas import ProductCreate, ProductUpdate
+from app.schemas.reorder import ReorderItem
 from app.repositories import ProductRepository, CategoryRepository
 
 
@@ -57,6 +58,9 @@ class ProductService:
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(product, field, value)
         return await self.product_repo.update(product)
+
+    async def reorder(self, items: list[ReorderItem]) -> None:
+        await self.product_repo.bulk_reorder([(item.id, item.position) for item in items])
 
     async def delete(self, product_id: int) -> None:
         """Soft delete — помечает продукт как удалённый вместо физического удаления."""

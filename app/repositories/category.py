@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .base import BaseRepository
@@ -19,11 +19,13 @@ class CategoryRepository(BaseRepository[Category]):
             query = query.where(Category.slug.ilike(f"%{slug}%"))
         if is_active is not None:
             query = query.where(Category.is_active == is_active)
-        result = await self.session.execute(query)
+        result = await self.session.execute(query.order_by(Category.position, Category.id))
         return result.scalars().all()
 
     async def get_all_active(self) -> list[Category]:
-        result = await self.session.execute(select(Category).where(Category.is_active))
+        result = await self.session.execute(
+            select(Category).where(Category.is_active).order_by(Category.position, Category.id)
+        )
         return result.scalars().all()
 
     async def get_active_by_slug(self, slug: str) -> Category | None:
@@ -39,3 +41,10 @@ class CategoryRepository(BaseRepository[Category]):
     async def get_by_name(self, name: str) -> Category | None:
         result = await self.session.execute(select(Category).where(Category.name == name))
         return result.scalar_one_or_none()
+
+    async def bulk_reorder(self, items: list[tuple[int, int]]) -> None:
+        for item_id, position in items:
+            await self.session.execute(
+                update(Category).where(Category.id == item_id).values(position=position)
+            )
+        await self.session.flush()

@@ -5,6 +5,7 @@ from app.core.dependencies import get_db, require_admin
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import Employee, Product
 from app.schemas import ProductCreate, ProductRead, ProductUpdate
+from app.schemas.reorder import ReorderItem
 from app.services import ProductService
 
 router = APIRouter(prefix="/admin/products", tags=["products"])
@@ -47,6 +48,15 @@ async def create_product(
         raise HTTPException(status_code=404, detail=str(e))
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.patch("/reorder", status_code=204)
+async def reorder_products(
+    items: list[ReorderItem],
+    session: AsyncSession = Depends(get_db),
+    _: Employee = Depends(require_admin),
+) -> None:
+    await ProductService(session).reorder(items)
 
 
 @router.patch("/{product_id}", response_model=ProductRead)

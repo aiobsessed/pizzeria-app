@@ -5,6 +5,7 @@ from app.core.dependencies import get_db, require_admin
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import Category, Employee
 from app.schemas import CategoryCreate, CategoryRead, CategoryUpdate
+from app.schemas.reorder import ReorderItem
 from app.services import CategoryService
 
 router = APIRouter(prefix="/admin/categories", tags=["categories"])
@@ -43,6 +44,15 @@ async def create_category(
         return await CategoryService(session).create(data)
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.patch("/reorder", status_code=204)
+async def reorder_categories(
+    items: list[ReorderItem],
+    session: AsyncSession = Depends(get_db),
+    _: Employee = Depends(require_admin),
+) -> None:
+    await CategoryService(session).reorder(items)
 
 
 @router.patch("/{category_id}", response_model=CategoryRead)

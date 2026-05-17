@@ -22,6 +22,7 @@ from app.schemas import (
     ProductCreate,
     ProductUpdate,
 )
+from app.schemas.reorder import ReorderItem
 from app.services import (
     PositionService,
     CategoryService,
@@ -376,6 +377,15 @@ async def delete_product(
     return flash_redirect("/admin/products", "Товар деактивирован", success=True)
 
 
+@router.patch("/products/reorder", status_code=204)
+async def reorder_products(
+    data: list[ReorderItem],
+    _: Employee = Depends(require_admin_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await ProductService(session).reorder(data)
+
+
 # ── Categories ────────────────────────────────────────────────────────────────
 
 
@@ -461,6 +471,15 @@ async def delete_category(
         return flash_redirect("/admin/categories", str(e))
 
     return flash_redirect("/admin/categories", "Категория деактивирована", success=True)
+
+
+@router.patch("/categories/reorder", status_code=204)
+async def reorder_categories(
+    data: list[ReorderItem],
+    _: Employee = Depends(require_admin_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await CategoryService(session).reorder(data)
 
 
 # ── Employees ─────────────────────────────────────────────────────────────────
