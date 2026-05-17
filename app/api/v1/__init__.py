@@ -11,6 +11,7 @@ from .admin import (
     admin_orders_router,
     admin_clients_router,
     admin_employees_router,
+    admin_promos_router,
 )
 
 routers = [
@@ -28,4 +29,5 @@ routers = [
     admin_orders_router,
     admin_clients_router,
     admin_employees_router,
+    admin_promos_router,
 ]

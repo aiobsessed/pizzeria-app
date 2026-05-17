@@ -167,6 +167,39 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                         </select>
                     </div>
 
+                    {# ── Промокод ───────────────────────────────────────────── #}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Промокод
+                        </label>
+                        <div class="flex gap-2">
+                            <input id="promo-input"
+                                   type="text"
+                                   name="promo_code_input"
+                                   placeholder="Введите код"
+                                   autocomplete="off"
+                                   class="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm
+                                          uppercase tracking-widest placeholder:normal-case
+                                          placeholder:tracking-normal
+                                          focus:outline-none focus:ring-2 focus:ring-orange-400
+                                          focus:border-transparent"/>
+                            <button type="button"
+                                    hx-post="/cart/promo"
+                                    hx-include="#promo-input"
+                                    hx-vals='{"code": ""}'
+                                    hx-target="#promo-result"
+                                    hx-swap="innerHTML"
+                                    hx-on:htmx:config-request="event.detail.parameters.code = document.getElementById('promo-input').value"
+                                    class="px-3 py-2 rounded-xl bg-orange-500 hover:bg-orange-600
+                                           text-white text-sm font-semibold transition-colors
+                                           whitespace-nowrap">
+                                Применить
+                            </button>
+                        </div>
+                        <div id="promo-result" class="min-h-[1.5rem]"></div>
+                    </div>
+                    {# ───────────────────────────────────────────────────────── #}
+
                     <div id="cart-submit">
                         {% include "client/partials/cart_submit.html" %}
                     </div>

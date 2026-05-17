@@ -8,3 +8,4 @@ from .order import OrderRepository
 from .order_item import OrderItemRepository
 from .position import PositionRepository
 from .product import ProductRepository
+from .promo import PromoRepository

@@ -14,6 +14,7 @@ from app.repositories import (
     AddressRepository,
 )
 from app.core.enums import OrderStatus, DeliveryType, PaymentMethod
+from app.services.promo import PromoService
 
 
 class OrderService:
@@ -23,6 +24,7 @@ class OrderService:
         self.cart_repo = CartRepository(session)
         self.cart_item_repo = CartItemRepository(session)
         self.address_repo = AddressRepository(session)
+        self.promo_service = PromoService(session)
 
     # -----------------------
     # Admin methods
@@ -97,7 +99,7 @@ class OrderService:
             raise NotFoundError("Order not found")
         return order
 
-    async def create(self, client_id: int, data: OrderCreate) -> Order:
+    async def create(self, client_id: int, data: OrderCreate, promo_code: str | None = None) -> Order:
         if data.delivery_type == DeliveryType.delivery:
             address = await self.address_repo.get_by_id(data.address_id)
             if address is None or address.client_id != client_id or address.is_deleted:
@@ -128,13 +130,26 @@ class OrderService:
             )
             total_price += product.price * cart_item.quantity
 
+        promo = None
+        if promo_code:
+            promo, preview = await self.promo_service.apply(promo_code, cart_items, total_price)
+            total_price = preview.total_after
+
         order = await self.order_repo.create(
-            Order(client_id=client_id, total_price=total_price, **data.model_dump())
+            Order(
+                client_id=client_id,
+                total_price=total_price,
+                promo_id=promo.id if promo else None,
+                **data.model_dump(),
+            )
         )
 
         for order_item in order_items:
             order_item.order_id = order.id
         await self.order_item_repo.bulk_create(order_items)
+
+        if promo:
+            await self.promo_service.increment_usage(promo)
 
         await self.cart_item_repo.bulk_delete(cart_items)
         await self.cart_repo.delete(cart)

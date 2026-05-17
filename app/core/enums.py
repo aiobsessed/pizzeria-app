@@ -26,3 +26,10 @@ class OrderStatus(str, Enum):
     on_the_way = "on_the_way"
     delivered = "delivered"
     canceled = "canceled"
+
+
+# ─── Промокоды ───────────────────────────────────────────────────────────────
+class PromoType(str, Enum):
+    free_item = "free_item"        # бесплатный товар
+    item_discount = "item_discount"  # скидка на конкретный товар в корзине
+    order_discount = "order_discount"  # скидка на весь заказ

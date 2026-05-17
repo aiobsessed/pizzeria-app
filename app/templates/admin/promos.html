@@ -1,0 +1,268 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Промокоды — Админ{% endblock %}
+
+{% block content %}
+
+{% set type_labels = {
+    'free_item':      'Бесплатный товар',
+    'item_discount':  'Скидка на товар',
+    'order_discount': 'Скидка на заказ'
+} %}
+
+{% set any_filter = filter_code or filter_promo_type or filter_is_active %}
+
+<div x-data="{
+    open: false,
+    isEdit: false,
+    form: {
+        id: null, code: '', promo_type: 'order_discount',
+        discount_percent: '', product_id: '', max_usages: '', expires_at: '', is_active: true
+    },
+    get needsProduct()  { return this.form.promo_type === 'free_item' || this.form.promo_type === 'item_discount'; },
+    get needsDiscount() { return this.form.promo_type === 'item_discount' || this.form.promo_type === 'order_discount'; },
+    openCreate() {
+        this.form = {
+            id: null, code: '', promo_type: 'order_discount',
+            discount_percent: '', product_id: '', max_usages: '', expires_at: '', is_active: true
+        };
+        this.isEdit = false;
+        this.open = true;
+    },
+    openEdit(p) {
+        this.form = { ...p };
+        this.isEdit = true;
+        this.open = true;
+    }
+}">
+
+<div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold text-gray-900">Промокоды</h1>
+    <button @click="openCreate()"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors">
+        + Добавить промокод
+    </button>
+</div>
+
+<form method="get" action="/admin/promos" class="flex flex-wrap items-end gap-3 mb-6">
+    <input type="text" name="code" value="{{ filter_code or '' }}" placeholder="Код"
+           class="px-3 py-2 rounded-xl border border-gray-200 text-sm font-mono uppercase focus:outline-none
+                  focus:ring-2 focus:ring-indigo-400 w-40">
+
+    <select name="promo_type"
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">Все типы</option>
+        <option value="order_discount"  {{ 'selected' if filter_promo_type == 'order_discount' }}>Скидка на заказ</option>
+        <option value="item_discount"   {{ 'selected' if filter_promo_type == 'item_discount'  }}>Скидка на товар</option>
+        <option value="free_item"       {{ 'selected' if filter_promo_type == 'free_item'      }}>Бесплатный товар</option>
+    </select>
+
+    <select name="is_active"
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">Все статусы</option>
+        <option value="true"  {{ 'selected' if filter_is_active == 'true'  }}>Активные</option>
+        <option value="false" {{ 'selected' if filter_is_active == 'false' }}>Отключённые</option>
+    </select>
+
+    <div class="flex gap-2">
+        <button type="submit"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium
+                       rounded-xl transition-colors">
+            Найти
+        </button>
+        {% if any_filter %}
+        <a href="/admin/promos"
+           class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-xl transition-colors">
+            ✕ Сбросить
+        </a>
+        {% endif %}
+    </div>
+</form>
+
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    {% if not promos %}
+    <div class="text-center py-16 text-gray-400">
+        <p class="text-4xl mb-3">🎟</p>
+        <p class="text-sm">{{ 'Промокоды с выбранными фильтрами не найдены' if any_filter else 'Промокодов пока нет' }}</p>
+    </div>
+    {% else %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                    <th class="text-left font-medium text-gray-500 px-4 py-3">Код</th>
+                    <th class="text-left font-medium text-gray-500 px-4 py-3">Тип</th>
+                    <th class="text-left font-medium text-gray-500 px-4 py-3">Скидка</th>
+                    <th class="text-left font-medium text-gray-500 px-4 py-3">Товар</th>
+                    <th class="text-left font-medium text-gray-500 px-4 py-3">Использований</th>
+                    <th class="text-left font-medium text-gray-500 px-4 py-3">Истекает</th>
+                    <th class="text-left font-medium text-gray-500 px-4 py-3">Статус</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for promo in promos %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 font-mono font-semibold text-gray-900 tracking-wide">{{ promo.code }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ type_labels[promo.promo_type.value] }}</td>
+                    <td class="px-4 py-3 tabular-nums text-gray-700">
+                        {% if promo.discount_percent %}{{ promo.discount_percent }}%{% else %}—{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">
+                        {{ promo.product.name if promo.product else '—' }}
+                    </td>
+                    <td class="px-4 py-3 tabular-nums text-gray-600">
+                        {{ promo.used_count }}{% if promo.max_usages %} / {{ promo.max_usages }}{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-500 text-xs">
+                        {% if promo.expires_at %}
+                            {{ promo.expires_at | to_msk }}
+                        {% else %}
+                            Бессрочно
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if promo.is_active %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Активен</span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Отключён</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <button @click="openEdit({
+                                id: {{ promo.id }},
+                                is_active: {{ 'true' if promo.is_active else 'false' }},
+                                max_usages: '{{ promo.max_usages or '' }}',
+                                expires_at: '{{ promo.expires_at.strftime('%Y-%m-%dT%H:%M') if promo.expires_at else '' }}'
+                            })"
+                                    class="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200
+                                           rounded-lg hover:bg-indigo-50 transition-colors">
+                                Ред.
+                            </button>
+                            <form action="/admin/promos/{{ promo.id }}/delete" method="post">
+                                <button type="submit"
+                                        onclick="return confirm('Удалить промокод {{ promo.code }}?')"
+                                        class="px-3 py-1.5 text-xs font-medium text-red-500 border border-red-200
+                                               rounded-lg hover:bg-red-50 transition-colors">
+                                    Удалить
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+{# Modal #}
+<div x-show="open"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+     @click.self="open = false">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h2 class="text-base font-bold text-gray-900"
+                x-text="isEdit ? 'Редактировать промокод' : 'Добавить промокод'"></h2>
+            <button @click="open = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+
+        <form :action="isEdit ? '/admin/promos/' + form.id + '/update' : '/admin/promos/create'"
+              method="post"
+              class="p-6 space-y-4">
+
+            {# ── Создание: все поля ── #}
+            <template x-if="!isEdit">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Код</label>
+                        <input type="text" name="code" x-model="form.code" required maxlength="64"
+                               placeholder="SUMMER20"
+                               class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-mono uppercase
+                                      focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Тип</label>
+                        <select name="promo_type" x-model="form.promo_type" required
+                                class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white
+                                       focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <option value="order_discount">Скидка на заказ</option>
+                            <option value="item_discount">Скидка на товар</option>
+                            <option value="free_item">Бесплатный товар</option>
+                        </select>
+                    </div>
+
+                    <div x-show="needsDiscount">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Скидка (%)</label>
+                        <input type="number" name="discount_percent" x-model="form.discount_percent"
+                               :required="needsDiscount" min="1" max="100" step="0.01"
+                               class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm
+                                      focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    </div>
+
+                    <div x-show="needsProduct">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Товар</label>
+                        <select name="product_id" x-model="form.product_id" :required="needsProduct"
+                                class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white
+                                       focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <option value="">Выберите товар</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </template>
+
+            {# ── Общие поля (создание + редактирование) ── #}
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Лимит использований</label>
+                    <input type="number" name="max_usages" x-model="form.max_usages"
+                           min="1" placeholder="∞ без лимита"
+                           class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Истекает</label>
+                    <input type="datetime-local" name="expires_at" x-model="form.expires_at"
+                           class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm
+                                  focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <input type="checkbox" name="is_active" id="promo_is_active"
+                       :checked="form.is_active"
+                       @change="form.is_active = $event.target.checked"
+                       class="rounded text-indigo-600">
+                <label for="promo_is_active" class="text-sm font-medium text-gray-700">Активен</label>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit"
+                        class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold
+                               rounded-xl transition-colors">
+                    Сохранить
+                </button>
+                <button type="button" @click="open = false"
+                        class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium
+                               rounded-xl transition-colors">
+                    Отмена
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div>{# end x-data #}
+
+{% endblock %}

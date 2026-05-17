@@ -30,6 +30,7 @@ from app.services import (
     OrderService,
     ProductService,
 )
+from app.services.promo import PromoService
 
 router = APIRouter(tags=["frontend-client"])
 
@@ -105,7 +106,6 @@ async def menu(
 
     active_category = active_categories_by_slug.get(category_slug) if category_slug else None
 
-    # Если slug передан, но категория скрыта или не существует — сбрасываем фильтр.
     category_reset = category_slug is not None and active_category is None
     if category_reset:
         category_slug = None
@@ -120,9 +120,7 @@ async def menu(
     context = {
         "products": products,
         "categories": categories,
-        # slug используется в URL-генерации шаблонов
         "active_category_slug": active_category.slug if active_category else None,
-        # id сохраняется для обратной совместимости с product_grid.html (empty-state)
         "active_category_id": active_category.id if active_category else None,
     }
 
@@ -304,6 +302,30 @@ async def delete_cart_item(
     )
 
 
+@router.post("/cart/promo", response_class=HTMLResponse)
+async def promo_preview(
+    request: Request,
+    code: str = Form(),
+    client: Client = Depends(require_client_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    """HTMX: preview скидки без применения — возвращает partial с итогом."""
+    items, total, _ = await CartService(session).get_summary(client.id)
+    try:
+        preview = await PromoService(session).preview(code.strip(), items, total)
+        return templates.TemplateResponse(
+            request,
+            "client/partials/promo_preview.html",
+            {"preview": preview, "code": code.strip().upper()},
+        )
+    except (NotFoundError, BusinessError) as e:
+        return templates.TemplateResponse(
+            request,
+            "client/partials/promo_preview.html",
+            {"error": str(e)},
+        )
+
+
 # ── Заказы ────────────────────────────────────────────────────────────────────
 
 
@@ -352,6 +374,7 @@ async def create_order(
     delivery_type: str = Form(),
     payment_method: str = Form(),
     address_id: int | None = Form(default=None),
+    promo_code: str = Form(default=""),
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
@@ -361,7 +384,7 @@ async def create_order(
             payment_method=PaymentMethod(payment_method),
             address_id=address_id,
         )
-        await OrderService(session).create(client.id, data)
+        await OrderService(session).create(client.id, data, promo_code=promo_code.strip() or None)
     except (NotFoundError, BusinessError, ValueError) as e:
         return flash_redirect("/cart", str(e))
 

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from app.models.employee import Employee
     from app.models.address import Address
     from app.models.product import Product
+    from app.models.promo import Promo
 
 
 class Order(Base):
@@ -22,6 +23,7 @@ class Order(Base):
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
     courier_id: Mapped[int | None] = mapped_column(ForeignKey("employees.id"))
     address_id: Mapped[int | None] = mapped_column(ForeignKey("addresses.id"))
+    promo_id: Mapped[int | None] = mapped_column(ForeignKey("promos.id"))
     delivery_type: Mapped[DeliveryType] = mapped_column(SAEnum(DeliveryType))
     payment_method: Mapped[PaymentMethod] = mapped_column(SAEnum(PaymentMethod))
     status: Mapped[OrderStatus] = mapped_column(
@@ -36,6 +38,7 @@ class Order(Base):
     client: Mapped[Client] = relationship(back_populates="orders")
     courier: Mapped[Employee | None] = relationship(foreign_keys=[courier_id])
     address: Mapped[Address | None] = relationship()
+    promo: Mapped[Promo | None] = relationship()
     items: Mapped[list[OrderItem]] = relationship(back_populates="order")
 
 
