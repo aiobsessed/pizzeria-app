@@ -65,6 +65,7 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
     {# Polling: каждые 5 сек проверяем доступность товаров, OOB обновляет #cart-submit #}
     <div hx-get="/cart/status"
          hx-trigger="every 5s"
+         hx-include="[name='promo_code']"
          hx-swap="none"
          aria-hidden="true"></div>
 

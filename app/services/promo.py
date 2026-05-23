@@ -116,5 +116,6 @@ class PromoService:
             promo_type=promo.promo_type,
             discount_amount=discount,
             total_after=max(total - discount, Decimal(0)),
+            product_id=promo.product_id,
             free_product_name=free_product_name,
         )

@@ -71,8 +71,9 @@ class PromoPreview(BaseModel):
     promo_id: int
     code: str
     promo_type: PromoType
-    discount_amount: Decimal      # итоговая сумма скидки
-    total_after: Decimal          # итог после скидки
+    discount_amount: Decimal
+    total_after: Decimal
+    product_id: int | None = None       # для item_discount и free_item — id целевого товара
     free_product_name: str | None = None  # для free_item
 
     model_config = ConfigDict(from_attributes=True)

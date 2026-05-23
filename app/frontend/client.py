@@ -192,12 +192,14 @@ async def cart_page(
 @router.get("/cart/status", response_class=HTMLResponse)
 async def cart_status_partial(
     request: Request,
+    promo_code: str = Query(default=""),
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
     """Polling endpoint: OOB-обновление строк корзины и кнопки оформления."""
-    items, _, _ = await CartService(session).get_summary(client.id)
+    items, total, _ = await CartService(session).get_summary(client.id)
     unavailable_names = _cart_unavailable_names(items)
+    preview, code = await _resolve_promo(promo_code, items, total, session)
     return templates.TemplateResponse(
         request,
         "client/partials/cart_rows_oob.html",
@@ -205,6 +207,8 @@ async def cart_status_partial(
             "items": items,
             "has_unavailable": bool(unavailable_names),
             "unavailable_names": unavailable_names,
+            "preview": preview,
+            "code": code,
         },
     )
 
@@ -339,13 +343,13 @@ async def promo_preview(
         return templates.TemplateResponse(
             request,
             "client/partials/promo_preview.html",
-            {"preview": preview, "code": code.strip().upper(), "total": total},
+            {"preview": preview, "code": code.strip().upper(), "total": total, "items": items},
         )
     except (NotFoundError, BusinessError) as e:
         return templates.TemplateResponse(
             request,
             "client/partials/promo_preview.html",
-            {"error": str(e), "total": total},
+            {"error": str(e), "total": total, "items": items},
         )
 
 
