@@ -789,16 +789,3 @@ async def update_promo(
 
     return flash_redirect("/admin/promos", "Промокод обновлён", success=True)
 
-
-@router.post("/promos/{promo_id}/delete")
-async def delete_promo(
-    promo_id: int,
-    _: Employee     = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
-    try:
-        await PromoService(session).delete(promo_id)
-    except NotFoundError as e:
-        return flash_redirect("/admin/promos", str(e))
-
-    return flash_redirect("/admin/promos", "Промокод удалён", success=True)

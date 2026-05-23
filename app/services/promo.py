@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PromoType
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
-from app.models.promo import Promo
 from app.models.cart import CartItem
+from app.models.promo import Promo
 from app.repositories.promo import PromoRepository
 from app.schemas.promo import PromoCreate, PromoPreview, PromoUpdate
 
@@ -18,7 +18,11 @@ class PromoService:
     # ─── Admin ───────────────────────────────────────────────────────────────
 
     async def get_all(self) -> list[Promo]:
-        return await self.repo.get_all_with_product()
+        promos = await self.repo.get_all_with_product()
+        for promo in promos:
+            if promo.is_active and self._is_stale(promo):
+                await self._deactivate(promo)
+        return promos
 
     async def get_by_id(self, promo_id: int) -> Promo:
         promo = await self.repo.get_by_id(promo_id)
@@ -37,10 +41,6 @@ class PromoService:
             setattr(promo, field, value)
         return await self.repo.update(promo)
 
-    async def delete(self, promo_id: int) -> None:
-        promo = await self.get_by_id(promo_id)
-        await self.repo.delete(promo)
-
     # ─── Client ──────────────────────────────────────────────────────────────
 
     async def preview(self, code: str, cart_items: list[CartItem], total: Decimal) -> PromoPreview:
@@ -55,6 +55,8 @@ class PromoService:
 
     async def increment_usage(self, promo: Promo) -> None:
         promo.used_count += 1
+        if promo.max_usages is not None and promo.used_count >= promo.max_usages:
+            promo.is_active = False
         await self.repo.update(promo)
 
     # ─── Internal ────────────────────────────────────────────────────────────
@@ -64,10 +66,21 @@ class PromoService:
         if promo is None or not promo.is_active:
             raise NotFoundError("Промокод не найден или неактивен")
         if promo.expires_at and promo.expires_at < datetime.now(timezone.utc):
+            await self._deactivate(promo)
             raise BusinessError("Срок действия промокода истёк")
         if promo.max_usages is not None and promo.used_count >= promo.max_usages:
+            await self._deactivate(promo)
             raise BusinessError("Промокод исчерпал лимит использований")
         return promo
+
+    def _is_stale(self, promo: Promo) -> bool:
+        expired = bool(promo.expires_at and promo.expires_at < datetime.now(timezone.utc))
+        exhausted = promo.max_usages is not None and promo.used_count >= promo.max_usages
+        return expired or exhausted
+
+    async def _deactivate(self, promo: Promo) -> None:
+        promo.is_active = False
+        await self.repo.update(promo)
 
     def _calculate_preview(
         self, promo: Promo, cart_items: list[CartItem], total: Decimal

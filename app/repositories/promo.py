@@ -2,7 +2,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.database.base import Base
 from app.models.promo import Promo
 from app.repositories.base import BaseRepository
 
@@ -21,6 +20,8 @@ class PromoRepository(BaseRepository[Promo]):
 
     async def get_all_with_product(self) -> list[Promo]:
         result = await self.session.execute(
-            select(Promo).options(joinedload(Promo.product))
+            select(Promo)
+            .options(joinedload(Promo.product))
+            .order_by(Promo.id.desc())
         )
         return result.scalars().all()

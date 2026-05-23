@@ -43,15 +43,3 @@ async def update_promo(
         from fastapi import HTTPException
         raise HTTPException(404, str(e))
 
-
-@router.delete("/{promo_id}", status_code=204)
-async def delete_promo(
-    promo_id: int,
-    session: AsyncSession = Depends(get_db),
-    _: None = Depends(require_admin),
-) -> None:
-    try:
-        await PromoService(session).delete(promo_id)
-    except NotFoundError as e:
-        from fastapi import HTTPException
-        raise HTTPException(404, str(e))
