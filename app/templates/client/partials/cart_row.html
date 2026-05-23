@@ -34,7 +34,7 @@
                hx-trigger="change delay:400ms"
                hx-target="#cart-item-{{ item.id }}"
                hx-swap="outerHTML"
-               hx-include="this"
+               hx-include="this, [name='promo_code']"
                class="w-16 px-2 py-1.5 text-sm text-center border border-gray-200 rounded-lg
                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent">
     </td>
@@ -47,6 +47,7 @@
             hx-delete="/cart/items/{{ item.id }}"
             hx-target="#cart-item-{{ item.id }}"
             hx-swap="outerHTML swap:0.3s"
+            hx-include="[name='promo_code']"
             class="p-1.5 text-gray-300 hover:text-red-400 transition-colors rounded-lg
                    hover:bg-red-50">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
@@ -58,11 +59,7 @@
     </td>
 </tr>
 {% if htmx_request is defined and htmx_request %}
-<div id="cart-total" hx-swap-oob="true"
-     class="flex items-center justify-between pt-4 border-t border-gray-100">
-    <span class="text-sm text-gray-500">Итого</span>
-    <span class="text-xl font-bold text-gray-900 tabular-nums">{{ total | round(2) }} ₽</span>
-</div>
+{% include "client/partials/cart_promo_oob.html" %}
 {% include "client/partials/cart_submit_oob.html" %}
 {% with oob=true %}{% include "client/partials/navbar_counter.html" %}{% endwith %}
 {% endif %}

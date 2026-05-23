@@ -1,5 +1,6 @@
 {# app/templates/client/partials/promo_preview.html #}
-{# Рендерится в #promo-result через HTMX #}
+{# Рендерится в #promo-result через HTMX (hx-swap="innerHTML").
+   OOB-своп #cart-total обновляет итог в таблице товаров. #}
 
 {% if error %}
 <p class="text-sm text-red-500 mt-1">{{ error }}</p>
@@ -7,18 +8,37 @@
 {% elif preview %}
 <input type="hidden" name="promo_code" value="{{ code }}">
 
-<div class="flex flex-col gap-1 mt-2 text-sm">
+<div class="mt-1.5">
     {% if preview.free_product_name %}
-    <p class="text-green-600 font-medium">
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md
+                 bg-green-50 text-green-700 text-sm font-medium">
         🎁 Бесплатно: {{ preview.free_product_name }}
-    </p>
+    </span>
     {% else %}
-    <p class="text-green-600 font-medium">
-        ✓ Скидка: −{{ preview.discount_amount | round(2) }} ₽
-    </p>
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md
+                 bg-green-50 text-green-700 text-sm font-medium">
+        ✓ Скидка −{{ preview.discount_amount | round(2) }} ₽
+    </span>
     {% endif %}
-    <p class="text-gray-700 font-semibold">
-        Итого со скидкой: {{ preview.total_after | round(2) }} ₽
-    </p>
 </div>
 {% endif %}
+
+{# OOB: обновляем итог в таблице — зачёркнутая цена + сумма со скидкой (или сброс при ошибке) #}
+<div id="cart-total" hx-swap-oob="true"
+     class="flex items-center justify-between pt-4 border-t border-gray-100">
+    <span class="text-sm text-gray-500">Итого</span>
+    {% if preview %}
+    <div class="flex flex-col items-end gap-0.5">
+        <span class="text-sm text-gray-400 line-through tabular-nums">
+            {{ total | round(2) }} ₽
+        </span>
+        <span class="text-xl font-bold text-gray-900 tabular-nums">
+            {{ preview.total_after | round(2) }} ₽
+        </span>
+    </div>
+    {% else %}
+    <span class="text-xl font-bold text-gray-900 tabular-nums">
+        {{ total | round(2) }} ₽
+    </span>
+    {% endif %}
+</div>

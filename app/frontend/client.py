@@ -1,6 +1,7 @@
 import json
+from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +23,7 @@ from app.schemas import (
     ClientUpdate,
     OrderCreate,
 )
+from app.schemas.promo import PromoPreview
 from app.services import (
     AddressService,
     CartService,
@@ -48,6 +50,20 @@ def _cart_unavailable_names(items: list[CartItem]) -> list[str]:
         for item in items
         if not item.product.is_available or not item.product.category.is_active
     ]
+
+
+async def _resolve_promo(
+    code: str, items: list[CartItem], total: Decimal, session: AsyncSession
+) -> tuple[PromoPreview | None, str | None]:
+    """Пересчитывает скидку по промокоду. При любой ошибке возвращает (None, None)."""
+    normalized = code.strip().upper()
+    if not normalized:
+        return None, None
+    try:
+        preview = await PromoService(session).preview(normalized, items, total)
+        return preview, normalized
+    except (NotFoundError, BusinessError):
+        return None, None
 
 
 # ── Главная страница ──────────────────────────────────────────────────────────
@@ -179,15 +195,14 @@ async def cart_status_partial(
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    """Polling endpoint: OOB-обновление строк корзины, итога и кнопки оформления."""
-    items, total, _ = await CartService(session).get_summary(client.id)
+    """Polling endpoint: OOB-обновление строк корзины и кнопки оформления."""
+    items, _, _ = await CartService(session).get_summary(client.id)
     unavailable_names = _cart_unavailable_names(items)
     return templates.TemplateResponse(
         request,
         "client/partials/cart_rows_oob.html",
         {
             "items": items,
-            "total": total,
             "has_unavailable": bool(unavailable_names),
             "unavailable_names": unavailable_names,
         },
@@ -233,6 +248,7 @@ async def update_cart_item(
     request: Request,
     item_id: int,
     quantity: int = Form(),
+    promo_code: str = Form(default=""),
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
@@ -246,6 +262,7 @@ async def update_cart_item(
     items, total, cart_count = await CartService(session).get_summary(client.id)
     updated_item = next((i for i in items if i.id == item_id), None)
     unavailable_names = _cart_unavailable_names(items)
+    preview, code = await _resolve_promo(promo_code, items, total, session)
 
     return templates.TemplateResponse(
         request,
@@ -257,6 +274,8 @@ async def update_cart_item(
             "has_unavailable": bool(unavailable_names),
             "unavailable_names": unavailable_names,
             "htmx_request": True,
+            "preview": preview,
+            "code": code,
         },
     )
 
@@ -279,6 +298,7 @@ async def clear_cart(
 async def delete_cart_item(
     request: Request,
     item_id: int,
+    promo_code: str = Query(default=""),
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
@@ -289,6 +309,7 @@ async def delete_cart_item(
 
     items, total, cart_count = await CartService(session).get_summary(client.id)
     unavailable_names = _cart_unavailable_names(items)
+    preview, code = await _resolve_promo(promo_code, items, total, session)
 
     return templates.TemplateResponse(
         request,
@@ -298,6 +319,8 @@ async def delete_cart_item(
             "cart_count": cart_count,
             "has_unavailable": bool(unavailable_names),
             "unavailable_names": unavailable_names,
+            "preview": preview,
+            "code": code,
         },
     )
 
@@ -316,13 +339,13 @@ async def promo_preview(
         return templates.TemplateResponse(
             request,
             "client/partials/promo_preview.html",
-            {"preview": preview, "code": code.strip().upper()},
+            {"preview": preview, "code": code.strip().upper(), "total": total},
         )
     except (NotFoundError, BusinessError) as e:
         return templates.TemplateResponse(
             request,
             "client/partials/promo_preview.html",
-            {"error": str(e)},
+            {"error": str(e), "total": total},
         )
 
 
@@ -539,7 +562,7 @@ async def create_address(
     except ValueError as e:
         return flash_redirect("/profile", str(e))
 
-    return flash_redirect("/profile", "Адрес успешно добавлен", success=True)
+    return flash_redirect("/profile", "Адрес успешно добавлён", success=True)
 
 
 @router.patch("/profile/addresses/{address_id}", response_class=HTMLResponse)
