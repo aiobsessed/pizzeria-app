@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import flash_redirect, get_db, get_flash, require_admin_from_cookie
+from app.core.dependencies import back_redirect, get_db, get_flash, require_admin_from_cookie
 from app.core.enums import DeliveryType, EmployeeStatus, OrderStatus, PaymentMethod, PromoType
 from app.core.exceptions import ConflictError, NotFoundError
 from app.frontend.templates import templates
@@ -302,6 +302,7 @@ async def products_page(
 
 @router.post("/products/create")
 async def create_product(
+    request: Request,
     name: str         = Form(),
     category_id: int  = Form(),
     weight: int       = Form(),
@@ -327,13 +328,14 @@ async def create_product(
             )
         )
     except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/products", str(e))
+        return back_redirect(request, "/admin/products", str(e))
 
-    return flash_redirect("/admin/products", "Товар создан", success=True)
+    return back_redirect(request, "/admin/products", "Товар создан", success=True)
 
 
 @router.post("/products/{product_id}/update")
 async def update_product(
+    request: Request,
     product_id: int,
     name: str         = Form(),
     category_id: int  = Form(),
@@ -361,13 +363,14 @@ async def update_product(
             ),
         )
     except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/products", str(e))
+        return back_redirect(request, "/admin/products", str(e))
 
-    return flash_redirect("/admin/products", "Товар обновлён", success=True)
+    return back_redirect(request, "/admin/products", "Товар обновлён", success=True)
 
 
 @router.post("/products/{product_id}/delete")
 async def delete_product(
+    request: Request,
     product_id: int,
     _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
@@ -375,9 +378,9 @@ async def delete_product(
     try:
         await ProductService(session).delete(product_id)
     except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/products", str(e))
+        return back_redirect(request, "/admin/products", str(e))
 
-    return flash_redirect("/admin/products", "Товар деактивирован", success=True)
+    return back_redirect(request, "/admin/products", "Товар деактивирован", success=True)
 
 
 @router.patch("/products/reorder", status_code=204)
@@ -426,6 +429,7 @@ async def categories_page(
 
 @router.post("/categories/create")
 async def create_category(
+    request: Request,
     name: str      = Form(),
     slug: str      = Form(),
     is_active: str = Form(default=""),
@@ -437,13 +441,14 @@ async def create_category(
             CategoryCreate(name=name, slug=slug, is_active=is_active == "on")
         )
     except ConflictError as e:
-        return flash_redirect("/admin/categories", str(e))
+        return back_redirect(request, "/admin/categories", str(e))
 
-    return flash_redirect("/admin/categories", "Категория создана", success=True)
+    return back_redirect(request, "/admin/categories", "Категория создана", success=True)
 
 
 @router.post("/categories/{category_id}/update")
 async def update_category(
+    request: Request,
     category_id: int,
     name: str      = Form(),
     slug: str      = Form(),
@@ -457,13 +462,14 @@ async def update_category(
             CategoryUpdate(name=name, slug=slug, is_active=is_active == "on"),
         )
     except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/categories", str(e))
+        return back_redirect(request, "/admin/categories", str(e))
 
-    return flash_redirect("/admin/categories", "Категория обновлена", success=True)
+    return back_redirect(request, "/admin/categories", "Категория обновлена", success=True)
 
 
 @router.post("/categories/{category_id}/delete")
 async def delete_category(
+    request: Request,
     category_id: int,
     _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
@@ -471,9 +477,9 @@ async def delete_category(
     try:
         await CategoryService(session).delete(category_id)
     except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/categories", str(e))
+        return back_redirect(request, "/admin/categories", str(e))
 
-    return flash_redirect("/admin/categories", "Категория деактивирована", success=True)
+    return back_redirect(request, "/admin/categories", "Категория деактивирована", success=True)
 
 
 @router.patch("/categories/reorder", status_code=204)
@@ -541,6 +547,7 @@ async def employees_page(
 
 @router.post("/employees/create")
 async def create_employee(
+    request: Request,
     position_id: int = Form(),
     name: str        = Form(),
     email: str       = Form(),
@@ -562,13 +569,14 @@ async def create_employee(
             )
         )
     except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/employees", str(e))
+        return back_redirect(request, "/admin/employees", str(e))
 
-    return flash_redirect("/admin/employees", "Сотрудник создан", success=True)
+    return back_redirect(request, "/admin/employees", "Сотрудник создан", success=True)
 
 
 @router.post("/employees/{employee_id}/update")
 async def update_employee(
+    request: Request,
     employee_id: int,
     position_id: int = Form(),
     name: str        = Form(),
@@ -592,13 +600,14 @@ async def update_employee(
             ),
         )
     except (NotFoundError, ConflictError) as e:
-        return flash_redirect("/admin/employees", str(e))
+        return back_redirect(request, "/admin/employees", str(e))
 
-    return flash_redirect("/admin/employees", "Сотрудник обновлён", success=True)
+    return back_redirect(request, "/admin/employees", "Сотрудник обновлён", success=True)
 
 
 @router.post("/employees/{employee_id}/delete")
 async def delete_employee(
+    request: Request,
     employee_id: int,
     _: Employee = Depends(require_admin_from_cookie),
     session: AsyncSession = Depends(get_db),
@@ -606,9 +615,9 @@ async def delete_employee(
     try:
         await EmployeeService(session).delete(employee_id)
     except NotFoundError as e:
-        return flash_redirect("/admin/employees", str(e))
+        return back_redirect(request, "/admin/employees", str(e))
 
-    return flash_redirect("/admin/employees", "Сотрудник удалён", success=True)
+    return back_redirect(request, "/admin/employees", "Сотрудник удалён", success=True)
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
@@ -738,6 +747,7 @@ async def promos_page(
 
 @router.post("/promos/create")
 async def create_promo(
+    request: Request,
     code: str             = Form(),
     promo_type: str       = Form(),
     discount_percent: str = Form(default=""),
@@ -761,13 +771,14 @@ async def create_promo(
             )
         )
     except (ConflictError, ValueError) as e:
-        return flash_redirect("/admin/promos", str(e))
+        return back_redirect(request, "/admin/promos", str(e))
 
-    return flash_redirect("/admin/promos", "Промокод создан", success=True)
+    return back_redirect(request, "/admin/promos", "Промокод создан", success=True)
 
 
 @router.post("/promos/{promo_id}/update")
 async def update_promo(
+    request: Request,
     promo_id: int,
     is_active: str  = Form(default=""),
     max_usages: str = Form(default=""),
@@ -785,7 +796,7 @@ async def update_promo(
             ),
         )
     except (NotFoundError, ValueError) as e:
-        return flash_redirect("/admin/promos", str(e))
+        return back_redirect(request, "/admin/promos", str(e))
 
-    return flash_redirect("/admin/promos", "Промокод обновлён", success=True)
+    return back_redirect(request, "/admin/promos", "Промокод обновлён", success=True)
 

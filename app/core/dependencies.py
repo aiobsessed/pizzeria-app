@@ -31,6 +31,14 @@ def flash_redirect(url: str, message: str, success: bool = False) -> RedirectRes
     return response
 
 
+def back_redirect(request: Request, fallback: str, message: str, success: bool = False) -> RedirectResponse:
+    """Редиректит на Referer (сохраняя фильтры), если он принадлежит тому же origin."""
+    referer = request.headers.get("referer", "")
+    base = str(request.base_url).rstrip("/")
+    url = referer if referer.startswith(f"{base}/") else fallback
+    return flash_redirect(url, message, success)
+
+
 def get_flash(request: Request) -> str | None:
     raw = request.cookies.get("flash")
     return unquote(raw) if raw is not None else None
