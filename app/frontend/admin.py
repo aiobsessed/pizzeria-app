@@ -61,13 +61,7 @@ def _parse_date(value: str | None) -> date | None:
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 
-@router.get("", response_class=HTMLResponse)
-async def dashboard(
-    request: Request,
-    employee: Employee = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
-    flash: str | None = Depends(get_flash),
-) -> HTMLResponse:
+async def _get_dashboard_context(session: AsyncSession) -> dict:
     today = datetime.now(_MSK).date()
 
     today_orders, active_couriers, positions = (
@@ -76,32 +70,55 @@ async def dashboard(
         await PositionService(session).get_all(),
     )
 
-    courier_position    = next((p for p in positions if p.role == "courier"), None)
-    today_by_status     = {s: sum(1 for o in today_orders if o.status == s) for s in OrderStatus}
-    today_revenue       = sum(o.total_price for o in today_orders if o.status == OrderStatus.delivered)
-    in_progress         = sum(
+    courier_position = next((p for p in positions if p.role == "courier"), None)
+    today_by_status  = {s: sum(1 for o in today_orders if o.status == s) for s in OrderStatus}
+    today_revenue    = sum(o.total_price for o in today_orders if o.status == OrderStatus.delivered)
+    in_progress      = sum(
         today_by_status[s]
         for s in (OrderStatus.accepted, OrderStatus.preparing, OrderStatus.on_the_way)
     )
 
+    return {
+        "today":                 today,
+        "today_orders_count":    len(today_orders),
+        "today_by_status":       today_by_status,
+        "today_revenue":         today_revenue,
+        "in_progress":           in_progress,
+        "active_couriers_count": len(active_couriers),
+        "courier_position_id":   courier_position.id if courier_position else None,
+        "OrderStatus":           OrderStatus,
+    }
+
+
+@router.get("", response_class=HTMLResponse)
+async def dashboard(
+    request: Request,
+    employee: Employee = Depends(require_admin_from_cookie),
+    session: AsyncSession = Depends(get_db),
+    flash: str | None = Depends(get_flash),
+) -> HTMLResponse:
+    ctx = await _get_dashboard_context(session)
     response = templates.TemplateResponse(
         request,
         "admin/dashboard.html",
-        {
-            "employee":              employee,
-            "flash":                 flash,
-            "today":                 today,
-            "today_orders_count":    len(today_orders),
-            "today_by_status":       today_by_status,
-            "today_revenue":         today_revenue,
-            "in_progress":           in_progress,
-            "active_couriers_count": len(active_couriers),
-            "courier_position_id":   courier_position.id if courier_position else None,
-            "OrderStatus":           OrderStatus,
-        },
+        {"employee": employee, "flash": flash, **ctx},
     )
     response.delete_cookie("flash")
     return response
+
+
+@router.get("/dashboard/stats", response_class=HTMLResponse)
+async def dashboard_stats(
+    request: Request,
+    _: Employee = Depends(require_admin_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    ctx = await _get_dashboard_context(session)
+    return templates.TemplateResponse(
+        request,
+        "admin/partials/dashboard_stats.html",
+        ctx,
+    )
 
 
 # ── Orders ────────────────────────────────────────────────────────────────────
@@ -158,6 +175,46 @@ async def orders_page(
     )
     response.delete_cookie("flash")
     return response
+
+
+@router.get("/orders/rows", response_class=HTMLResponse)
+async def orders_rows(
+    request: Request,
+    status: str | None = None,
+    delivery_type: str | None = None,
+    payment_method: str | None = None,
+    courier_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    _: Employee = Depends(require_admin_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    status_enum         = _parse_enum(OrderStatus, status)
+    delivery_type_enum  = _parse_enum(DeliveryType, delivery_type)
+    payment_method_enum = _parse_enum(PaymentMethod, payment_method)
+    courier_id_int      = int(courier_id) if courier_id else None
+    orders   = await OrderService(session).get_all_with_items(
+        status=status_enum,
+        delivery_type=delivery_type_enum,
+        payment_method=payment_method_enum,
+        courier_id=courier_id_int,
+        date_from=_parse_date(date_from),
+        date_to=_parse_date(date_to),
+    )
+    couriers = await EmployeeService(session).get_all(role="courier")
+    return templates.TemplateResponse(
+        request,
+        "admin/partials/orders_rows.html",
+        {
+            "orders":      orders,
+            "couriers":    couriers,
+            "OrderStatus": OrderStatus,
+            "any_filter":  bool(
+                status_enum or delivery_type_enum or payment_method_enum
+                or courier_id_int or date_from or date_to
+            ),
+        },
+    )
 
 
 @router.patch("/orders/{order_id}/status", response_class=HTMLResponse)

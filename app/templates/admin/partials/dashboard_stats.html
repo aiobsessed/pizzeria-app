@@ -1,0 +1,83 @@
+{% set today_iso = today.isoformat() %}
+{% set orders_url = "/admin/orders?date_from=" + today_iso + "&date_to=" + today_iso %}
+
+{% set STATUS_LABELS = {
+    "accepted":   "Принят",
+    "preparing":  "Готовится",
+    "on_the_way": "В пути",
+    "delivered":  "Доставлен",
+    "canceled":   "Отменён",
+} %}
+{% set STATUS_COLORS = {
+    "accepted":   "bg-blue-100 text-blue-700",
+    "preparing":  "bg-amber-100 text-amber-700",
+    "on_the_way": "bg-orange-100 text-orange-700",
+    "delivered":  "bg-green-100 text-green-700",
+    "canceled":   "bg-gray-100 text-gray-500",
+} %}
+
+<span class="text-sm text-gray-400 block -mt-1 mb-6">{{ today.strftime("%d.%m.%Y") }} · МСК</span>
+
+{# ── KPI cards ──────────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+    <a href="{{ orders_url }}"
+       class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6
+              hover:shadow-md hover:border-indigo-100 transition-all">
+        <div class="text-3xl mb-3">📦</div>
+        <div class="text-3xl font-black text-gray-900 tabular-nums">{{ today_orders_count }}</div>
+        <div class="text-sm text-gray-500 mt-1">Заказов сегодня</div>
+    </a>
+
+    <a href="{{ orders_url }}"
+       class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6
+              hover:shadow-md hover:border-indigo-100 transition-all">
+        <div class="text-3xl mb-3">⏳</div>
+        <div class="text-3xl font-black text-indigo-600 tabular-nums">{{ in_progress }}</div>
+        <div class="text-sm text-gray-500 mt-1">В работе сейчас</div>
+    </a>
+
+    <a href="/admin/employees?{% if courier_position_id %}position_id={{ courier_position_id }}&{% endif %}status=active"
+       class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6
+              hover:shadow-md hover:border-indigo-100 transition-all">
+        <div class="text-3xl mb-3">🚗</div>
+        <div class="text-3xl font-black text-gray-900 tabular-nums">{{ active_couriers_count }}</div>
+        <div class="text-sm text-gray-500 mt-1">Активных курьеров</div>
+    </a>
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div class="text-3xl mb-3">💰</div>
+        <div class="text-3xl font-black text-green-600 tabular-nums">{{ "%.2f"|format(today_revenue|float) }}</div>
+        <div class="text-sm text-gray-500 mt-1">Выручка сегодня, руб.</div>
+    </div>
+
+</div>
+
+{# ── Status breakdown ───────────────────────────────────────────────────────── #}
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-lg">
+    <h2 class="text-base font-bold text-gray-900 mb-4">Заказы сегодня по статусам</h2>
+    {% if today_orders_count == 0 %}
+    <p class="text-sm text-gray-400 text-center py-6">Заказов за сегодня нет</p>
+    {% else %}
+    <div class="space-y-3">
+        {% for status in OrderStatus %}
+        {% set cnt = today_by_status[status] %}
+        {% set pct = (cnt / today_orders_count * 100) | round(1) %}
+        <a href="{{ orders_url }}&status={{ status.value }}"
+           class="block group">
+            <div class="flex items-center justify-between mb-1">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                             {{ STATUS_COLORS[status.value] }}">
+                    {{ STATUS_LABELS[status.value] }}
+                </span>
+                <span class="text-sm font-semibold text-gray-900 tabular-nums">{{ cnt }}</span>
+            </div>
+            <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full bg-indigo-500 rounded-full transition-all group-hover:bg-indigo-600"
+                     style="width: {{ pct }}%"></div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

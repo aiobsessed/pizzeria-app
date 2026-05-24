@@ -96,34 +96,22 @@
     </div>
 </form>
 
-<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-    {% if not orders %}
-    <div class="text-center py-16 text-gray-400">
-        <p class="text-4xl mb-3">📦</p>
-        <p class="text-sm">{{ 'Заказы с выбранными фильтрами не найдены' if any_filter else 'Заказов не найдено' }}</p>
-    </div>
-    {% else %}
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 border-b border-gray-100">
-                <tr>
-                    <th class="text-left font-medium text-gray-500 px-4 py-3 whitespace-nowrap">#</th>
-                    <th class="text-left font-medium text-gray-500 px-4 py-3 whitespace-nowrap">Клиент</th>
-                    <th class="text-left font-medium text-gray-500 px-4 py-3 whitespace-nowrap">Сумма</th>
-                    <th class="text-left font-medium text-gray-500 px-4 py-3 whitespace-nowrap">Тип / Оплата</th>
-                    <th class="text-left font-medium text-gray-500 px-4 py-3 whitespace-nowrap">Статус</th>
-                    <th class="text-left font-medium text-gray-500 px-4 py-3 whitespace-nowrap">Курьер</th>
-                    <th class="text-left font-medium text-gray-500 px-4 py-3 whitespace-nowrap">Дата</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-50">
-                {% for order in orders %}
-                {% include "admin/partials/order_row.html" %}
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
+<div id="orders-table-container"
+     class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+     x-data
+     x-init="
+         let paused = false;
+         $el.addEventListener('focusin',        e => { if (e.target.matches('select')) paused = true;  });
+         $el.addEventListener('focusout',       e => { if (e.target.matches('select')) paused = false; });
+         $el.addEventListener('htmx:afterSwap', ()  => { paused = false; });
+         setInterval(() => {
+             if (paused) return;
+             htmx.ajax('GET', '/admin/orders/rows' + location.search, {
+                 target: '#orders-table-container', swap: 'innerHTML'
+             });
+         }, 5000)
+     ">
+    {% include "admin/partials/orders_rows.html" %}
 </div>
 
 {% endblock %}
