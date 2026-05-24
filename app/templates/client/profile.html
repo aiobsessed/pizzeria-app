@@ -114,10 +114,9 @@
                             border-gray-100 shadow-lg p-4 z-10">
                     <p class="text-sm font-semibold text-gray-900 mb-3">Новый адрес</p>
                     <form action="/profile/addresses" method="post" class="space-y-3">
-                        <input type="text" name="city" placeholder="Город" required maxlength="50"
+                        <input type="text" value="Рязань" disabled
                                class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
-                                      focus:outline-none focus:ring-2 focus:ring-orange-400
-                                      focus:border-transparent placeholder:text-gray-400 transition">
+                                      bg-gray-50 text-gray-400 cursor-not-allowed">
                         <input type="text" name="street" placeholder="Улица" required maxlength="150"
                                class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
                                       focus:outline-none focus:ring-2 focus:ring-orange-400
@@ -127,7 +126,7 @@
                                    class="w-1/2 px-3.5 py-2 rounded-xl border border-gray-200 text-sm
                                           focus:outline-none focus:ring-2 focus:ring-orange-400
                                           focus:border-transparent placeholder:text-gray-400 transition">
-                            <input type="text" name="apartment" placeholder="Квартира" maxlength="20"
+                            <input type="text" name="apartment" placeholder="Квартира (необязательно)" maxlength="20"
                                    class="w-1/2 px-3.5 py-2 rounded-xl border border-gray-200 text-sm
                                           focus:outline-none focus:ring-2 focus:ring-orange-400
                                           focus:border-transparent placeholder:text-gray-400 transition">

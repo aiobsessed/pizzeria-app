@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class AddressBase(BaseModel):
-    city: str = Field(max_length=50)
     street: str = Field(max_length=150)
     house: str = Field(max_length=20)
 
@@ -15,6 +14,7 @@ class AddressCreate(AddressBase):
 class AddressRead(AddressBase):
     id: int
     client_id: int
+    city: str
     apartment: str | None
     comment: str | None
     is_deleted: bool
@@ -23,7 +23,6 @@ class AddressRead(AddressBase):
 
 
 class AddressUpdate(BaseModel):
-    city: str | None = Field(None, max_length=50)
     street: str | None = Field(None, max_length=150)
     house: str | None = Field(None, max_length=20)
     apartment: str | None = Field(None, max_length=20)

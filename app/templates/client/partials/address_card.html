@@ -40,11 +40,9 @@
                       hx-target="#address-{{ addr.id }}"
                       hx-swap="outerHTML"
                       class="space-y-3">
-                    <input type="text" name="city" value="{{ addr.city }}"
-                           placeholder="Город" required maxlength="50"
+                    <input type="text" value="{{ addr.city }}" disabled
                            class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
-                                  focus:outline-none focus:ring-2 focus:ring-orange-400
-                                  focus:border-transparent placeholder:text-gray-400 transition">
+                                  bg-gray-50 text-gray-400 cursor-not-allowed">
                     <input type="text" name="street" value="{{ addr.street }}"
                            placeholder="Улица" required maxlength="150"
                            class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
@@ -57,7 +55,7 @@
                                       focus:outline-none focus:ring-2 focus:ring-orange-400
                                       focus:border-transparent placeholder:text-gray-400 transition">
                         <input type="text" name="apartment" value="{{ addr.apartment or '' }}"
-                               placeholder="Квартира" maxlength="20"
+                               placeholder="Квартира (необязательно)" maxlength="20"
                                class="w-1/2 px-3.5 py-2 rounded-xl border border-gray-200 text-sm
                                       focus:outline-none focus:ring-2 focus:ring-orange-400
                                       focus:border-transparent placeholder:text-gray-400 transition">

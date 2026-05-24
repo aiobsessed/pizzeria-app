@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.models import Address
 from app.schemas import AddressCreate, AddressUpdate
@@ -26,7 +27,11 @@ class AddressService:
     # Client methods
     # -----------------------
     async def create(self, client_id: int, data: AddressCreate) -> Address:
-        new_address = Address(client_id=client_id, **data.model_dump())
+        new_address = Address(
+            client_id=client_id,
+            city=settings.DELIVERY_CITY,
+            **data.model_dump(),
+        )
         return await self.address_repo.create(new_address)
 
     async def update(self, client_id: int, address_id: int, data: AddressUpdate) -> Address:

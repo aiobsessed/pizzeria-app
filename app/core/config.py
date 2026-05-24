@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     )
 
     # -----------------------
+    # Business configuration
+    # -----------------------
+    DELIVERY_CITY: str = Field(
+        default="Рязань",
+        min_length=1,
+        description="Город доставки пиццерии",
+    )
+
+    # -----------------------
     # Pydantic config
     # -----------------------
     model_config = SettingsConfigDict(
