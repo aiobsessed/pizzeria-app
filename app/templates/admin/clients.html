@@ -47,6 +47,7 @@
 </form>
 
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
     {% if not clients %}
     <div class="text-center py-16 text-gray-400">
         <p class="text-4xl mb-3">👥</p>
@@ -72,6 +73,7 @@
         </tbody>
     </table>
     {% endif %}
+    </div>
 </div>
 
 {% endblock %}
