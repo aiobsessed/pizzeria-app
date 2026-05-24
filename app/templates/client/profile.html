@@ -146,17 +146,20 @@
             </details>
         </div>
 
-        {% if addresses %}
-        <div class="space-y-3">
-            {% for addr in addresses %}
-            {% include "client/partials/address_card.html" %}
-            {% endfor %}
+        <div x-data="{ empty: {{ 'false' if addresses else 'true' }} }"
+             x-init="new MutationObserver(() => {
+                         empty = $el.querySelectorAll('[id^=address-]').length === 0;
+                     }).observe($el, { childList: true, subtree: true })">
+            <p x-show="empty"
+               class="text-sm text-gray-400 text-center py-6">
+                У вас пока нет сохранённых адресов.
+            </p>
+            <div class="space-y-3">
+                {% for addr in addresses %}
+                {% include "client/partials/address_card.html" %}
+                {% endfor %}
+            </div>
         </div>
-        {% else %}
-        <p class="text-sm text-gray-400 text-center py-6">
-            У вас пока нет сохранённых адресов.
-        </p>
-        {% endif %}
     </div>
 
     {# Account info #}
