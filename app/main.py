@@ -8,13 +8,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.v1 import routers
+from app.api.v1 import routers as api_routers
 from app.commands.create_admin import _create_admin
 from app.core.config import settings
 from app.core.exceptions import FrontendRedirect
 from app.database.database import db
 from app.database.seeds import check_admin_exists, seed_defaults
-from app.frontend import admin_router, auth_router, client_router, courier_router
+from app.frontend import routers as frontend_routers
 from app.frontend.templates import templates
 
 
@@ -40,13 +40,11 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-for router in routers:
+for router in api_routers:
     app.include_router(router, prefix="/api/v1")
 
-app.include_router(auth_router)
-app.include_router(client_router)
-app.include_router(admin_router)
-app.include_router(courier_router)
+for router in frontend_routers:
+    app.include_router(router)
 
 
 @app.exception_handler(FrontendRedirect)
