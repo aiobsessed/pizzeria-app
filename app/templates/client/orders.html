@@ -51,7 +51,6 @@
         {% for order in orders %}
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-            {# Order header #}
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50">
                 <div>
                     <p class="text-sm font-semibold text-gray-900">Заказ #{{ order.id }}</p>
@@ -62,7 +61,7 @@
 
                 {#
                     Dual-interval polling:
-                    • Active orders  → every 2s  (fast, real-time feel)
+                    • Active orders   → every 2s  (fast, real-time feel)
                     • Terminal orders → every 15s (rare admin overrides still propagate)
                     Both triggers use opposing conditions on .status-terminal so exactly
                     one fires at a time, with no server-side coordination needed.
@@ -76,7 +75,7 @@
                 </div>
             </div>
 
-            {# Order items — flex-baseline prevents long names from pushing prices off-screen #}
+            {# flex-baseline prevents long names from pushing prices off-screen #}
             <div class="px-5 py-3 space-y-2">
                 {% for item in order.items %}
                 <div class="flex items-baseline justify-between gap-x-4 text-sm">
@@ -90,7 +89,6 @@
                 {% endfor %}
             </div>
 
-            {# Order footer #}
             <div class="flex items-center justify-between gap-x-4 px-5 py-3
                         bg-gray-50 border-t border-gray-100">
                 <span class="flex-1 min-w-0 truncate text-xs text-gray-400">

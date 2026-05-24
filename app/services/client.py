@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AuthError, ConflictError, NotFoundError
@@ -22,14 +20,12 @@ class ClientService:
         email: str | None = None,
         phone: str | None = None,
         is_blocked: bool | None = None,
-        created_at: datetime | None = None,
     ) -> list[Client]:
         return await self.client_repo.get_all(
             name=name,
             email=email,
             phone=phone,
             is_blocked=is_blocked,
-            created_at=created_at,
         )
 
     async def get_by_id(self, client_id: int) -> Client:

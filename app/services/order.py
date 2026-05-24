@@ -76,16 +76,14 @@ class OrderService:
         elif order.status == OrderStatus.canceled:
             raise ConflictError("Order has already been canceled")
         order.status = OrderStatus.delivered
-        await self.order_repo.update(order)
-        return await self.order_repo.get_by_id_with_items(order_id)
+        return await self.order_repo.update(order)
 
     async def cancel(self, order_id: int) -> Order:
         order = await self.get_by_id_with_items(order_id)
         if order.status == OrderStatus.canceled:
             raise ConflictError("Order already canceled")
         order.status = OrderStatus.canceled
-        await self.order_repo.update(order)
-        return await self.order_repo.get_by_id_with_items(order_id)
+        return await self.order_repo.update(order)
 
     # -----------------------
     # Client methods
@@ -165,5 +163,4 @@ class OrderService:
         elif order.status != OrderStatus.accepted:
             raise BusinessError("Cannot cancel the order at this stage")
         order.status = OrderStatus.canceled
-        await self.order_repo.update(order)
-        return await self.order_repo.get_by_id_with_items(order_id)
+        return await self.order_repo.update(order)

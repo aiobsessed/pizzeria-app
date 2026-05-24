@@ -5,6 +5,7 @@ from .categories import router as categories_router
 from .products import router as products_router
 from .cart import router as cart_router
 from .orders import router as orders_router
+from .courier import courier_router
 from .admin import (
     admin_categories_router,
     admin_products_router,
@@ -23,6 +24,8 @@ routers = [
     products_router,
     cart_router,
     orders_router,
+    # courier
+    courier_router,
     # admin
     admin_categories_router,
     admin_products_router,

@@ -13,8 +13,6 @@ from app.core.config import settings
 
 
 class Database:
-    """Управляет подключением к PostgreSQL и жизненным циклом сессии"""
-
     def __init__(self) -> None:
         self._engine: AsyncEngine = create_async_engine(
             url=settings.DATABASE_URL,
@@ -28,7 +26,6 @@ class Database:
         root_engine = create_async_engine(
             url=settings.DATABASE_URL_ROOT, isolation_level="AUTOCOMMIT"
         )
-
         async with root_engine.connect() as conn:
             result = await conn.execute(
                 text(f"SELECT 1 FROM pg_database WHERE datname = '{settings.DB_NAME}'")

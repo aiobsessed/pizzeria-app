@@ -8,7 +8,6 @@
 <div id="order-{{ order.id }}"
      class="bg-white rounded-2xl border {% if order.status == OrderStatus.delivered %}border-green-200 opacity-60{% else %}border-gray-100{% endif %} shadow-sm p-4 space-y-3">
 
-    {# Header: order id + status badge #}
     <div class="flex items-center justify-between">
         <span class="text-xs font-mono text-gray-400">#{{ order.id }}</span>
         {% if order.status == OrderStatus.accepted %}
@@ -22,7 +21,6 @@
         {% endif %}
     </div>
 
-    {# Client #}
     <div class="flex items-center gap-2 text-sm text-gray-700">
         <span class="text-gray-400">👤</span>
         <span>{{ order.client.name }}</span>
@@ -30,7 +28,6 @@
            class="ml-auto text-indigo-600 font-medium">{{ order.client.phone }}</a>
     </div>
 
-    {# Address #}
     {% if order.address %}
     <div class="flex items-start gap-2 text-sm text-gray-700">
         <span class="text-gray-400 mt-0.5">📍</span>
@@ -47,7 +44,6 @@
     </div>
     {% endif %}
 
-    {# Items #}
     <div class="border-t border-gray-50 pt-3 space-y-1">
         {% for item in order.items %}
         <div class="flex justify-between text-sm">
@@ -61,7 +57,6 @@
         </div>
     </div>
 
-    {# Action #}
     {% if order.status == OrderStatus.on_the_way %}
     <button hx-post="/courier/orders/{{ order.id }}/deliver"
             hx-target="#order-{{ order.id }}"

@@ -1,6 +1,6 @@
-import bcrypt
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from jose import JWTError, jwt
 
 from app.core.config import settings
@@ -23,19 +23,10 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(
     subject_id: int,
-    subject_type: str,  # "client" | "employee"
-    role: str | None = None,  # None для клиента; "admin" | "courier" для сотрудника
+    subject_type: str,
+    role: str | None = None,
 ) -> str:
-    """
-    subject_type разделяет два потока аутентификации:
-      - "client"   → токен клиента (POST /auth/login)
-      - "employee" → токен сотрудника (POST /auth/staff/login)
-
-    Это позволяет get_current_client и get_current_employee
-    на уровне dependencies отклонять чужие токены (status 401),
-    а не падать с 500 при попытке найти employee по client.id.
-    """
-    payload: dict = {
+    payload = {
         "sub": str(subject_id),
         "sub_type": subject_type,
         "exp": datetime.now(tz=timezone.utc)
@@ -53,11 +44,10 @@ def create_access_token(
 
 def verify_token(token: str) -> dict:
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token=token,
             key=settings.SECRET_KEY.get_secret_value(),
             algorithms=settings.ALGORITHM,
         )
     except JWTError:
         raise AuthError("Token is invalid")
-    return payload

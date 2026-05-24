@@ -1,8 +1,5 @@
 """
 Интерактивное создание первого администратора.
-
-Использование:
-    python -m app.commands.create_admin
 """
 import asyncio
 import getpass

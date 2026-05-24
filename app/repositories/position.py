@@ -9,11 +9,8 @@ class PositionRepository(BaseRepository[Position]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(Position, session)
 
-    async def get_all(self, name: str | None = None) -> list[Position]:
-        query = select(Position)
-        if name is not None:
-            query = query.where(Position.name.ilike(f"%{name}%"))
-        result = await self.session.execute(query)
+    async def get_all(self) -> list[Position]:
+        result = await self.session.execute(select(Position))
         return result.scalars().all()
 
     async def get_by_name(self, name: str) -> Position | None:

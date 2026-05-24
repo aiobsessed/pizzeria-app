@@ -32,7 +32,6 @@
 {% endblock %}
 
 {% block content %}
-{# Hero — статичный, не требует поллинга #}
 <section class="bg-gradient-to-br from-orange-50 to-amber-50 border-b border-orange-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 text-center">
         <h1 class="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
@@ -47,7 +46,6 @@
     </div>
 </section>
 
-{# Динамический контент: категории + товары — обновляются поллингом каждые 5s #}
 <div x-data="{}"
      x-init="setInterval(() => {
          if (window.__productModalOpen) return;

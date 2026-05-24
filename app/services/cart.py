@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import attributes
 
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
 from app.models import Cart, CartItem
@@ -17,9 +18,8 @@ class CartService:
     async def get_by_client(self, client_id: int) -> Cart:
         cart = await self.cart_repo.get_by_client(client_id)
         if cart is None:
-            new_cart = Cart(client_id=client_id)
-            await self.cart_repo.create(new_cart)
-            cart = await self.cart_repo.get_by_client(client_id)
+            cart = await self.cart_repo.create(Cart(client_id=client_id))
+            attributes.set_committed_value(cart, "items", [])
         return cart
 
     async def get_summary(self, client_id: int) -> tuple[list[CartItem], Decimal, int]:

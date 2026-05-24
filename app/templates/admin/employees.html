@@ -37,7 +37,6 @@
     </button>
 </div>
 
-{# Filters #}
 <form method="get" action="/admin/employees" class="flex flex-wrap items-end gap-3 mb-4">
     <input type="text" name="name" value="{{ filter_name or '' }}" placeholder="Имя"
            class="px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none
@@ -153,7 +152,6 @@
     {% endif %}
 </div>
 
-{# Modal #}
 <div x-show="open" x-cloak
      x-transition:enter="transition ease-out duration-200"
      x-transition:enter-start="opacity-0"
@@ -229,6 +227,6 @@
     </div>
 </div>
 
-</div>{# end x-data #}
+</div>
 
 {% endblock %}

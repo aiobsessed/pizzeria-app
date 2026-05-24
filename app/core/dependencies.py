@@ -31,8 +31,9 @@ def flash_redirect(url: str, message: str, success: bool = False) -> RedirectRes
     return response
 
 
-def back_redirect(request: Request, fallback: str, message: str, success: bool = False) -> RedirectResponse:
-    """Редиректит на Referer (сохраняя фильтры), если он принадлежит тому же origin."""
+def back_redirect(
+    request: Request, fallback: str, message: str, success: bool = False
+) -> RedirectResponse:
     referer = request.headers.get("referer", "")
     base = str(request.base_url).rstrip("/")
     url = referer if referer.startswith(f"{base}/") else fallback
@@ -44,6 +45,39 @@ def get_flash(request: Request) -> str | None:
     return unquote(raw) if raw is not None else None
 
 
+# ── Private Helpers ───────────────────────────────────────────────────────────
+
+
+def _parse_api_payload(credentials: HTTPAuthorizationCredentials, expected_type: str) -> dict:
+    try:
+        payload = verify_token(credentials.credentials)
+        if payload.get("sub_type") != expected_type:
+            raise HTTPException(status_code=401, detail="Invalid token type")
+        return payload
+    except AuthError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+def _parse_cookie_payload(
+    request: Request,
+    expected_type: str,
+    expected_role: str | None = None,
+    redirect_url: str = "/login",
+) -> dict:
+    token = request.cookies.get("access_token")
+    if not token:
+        raise FrontendRedirect(redirect_url)
+    try:
+        payload = verify_token(token)
+        if payload.get("sub_type") != expected_type:
+            raise FrontendRedirect(redirect_url)
+        if expected_role and payload.get("role") != expected_role:
+            raise FrontendRedirect(redirect_url)
+        return payload
+    except AuthError:
+        raise FrontendRedirect(redirect_url)
+
+
 # ── Поток: API (Bearer token) ──────────────────────────────────────────────────
 
 
@@ -51,15 +85,7 @@ async def get_current_client(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     session: AsyncSession = Depends(get_db),
 ) -> Client:
-    token = credentials.credentials
-    try:
-        payload = verify_token(token)
-    except AuthError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    if payload.get("sub_type") != "client":
-        raise HTTPException(status_code=401, detail="Invalid token type")
-
+    payload = _parse_api_payload(credentials, "client")
     client = await ClientRepository(session).get_by_id(int(payload["sub"]))
     if client is None:
         raise HTTPException(status_code=401, detail="Client not found")
@@ -72,15 +98,7 @@ async def get_current_employee(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     session: AsyncSession = Depends(get_db),
 ) -> Employee:
-    token = credentials.credentials
-    try:
-        payload = verify_token(token)
-    except AuthError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    if payload.get("sub_type") != "employee":
-        raise HTTPException(status_code=401, detail="Invalid token type")
-
+    payload = _parse_api_payload(credentials, "employee")
     employee = await EmployeeRepository(session).get_by_id(int(payload["sub"]))
     if employee is None:
         raise HTTPException(status_code=401, detail="Employee not found")
@@ -96,6 +114,8 @@ async def require_admin(employee: Employee = Depends(get_current_employee)) -> E
 async def require_courier(employee: Employee = Depends(get_current_employee)) -> Employee:
     if employee.position.role != "courier":
         raise HTTPException(status_code=403, detail="Access forbidden")
+    if employee.status != EmployeeStatus.active:
+        raise HTTPException(status_code=403, detail="Access forbidden")
     return employee
 
 
@@ -106,22 +126,9 @@ async def require_client_from_cookie(
     request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> Client:
-    token = request.cookies.get("access_token")
-    if not token:
-        raise FrontendRedirect("/login")
-
-    try:
-        payload = verify_token(token)
-    except AuthError:
-        raise FrontendRedirect("/login")
-
-    if payload.get("sub_type") != "client":
-        raise FrontendRedirect("/login")
-
+    payload = _parse_cookie_payload(request, "client", redirect_url="/login")
     client = await ClientRepository(session).get_by_id(int(payload["sub"]))
-    if client is None:
-        raise FrontendRedirect("/login")
-    if client.is_blocked:
+    if client is None or client.is_blocked:
         raise FrontendRedirect("/login")
     return client
 
@@ -130,21 +137,9 @@ async def require_admin_from_cookie(
     request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> Employee:
-    token = request.cookies.get("access_token")
-    if not token:
-        raise FrontendRedirect("/staff/login")
-
-    try:
-        payload = verify_token(token)
-    except AuthError:
-        raise FrontendRedirect("/staff/login")
-
-    if payload.get("sub_type") != "employee":
-        raise FrontendRedirect("/staff/login")
-
-    if payload.get("role") != "admin":
-        raise FrontendRedirect("/staff/login")
-
+    payload = _parse_cookie_payload(
+        request, "employee", expected_role="admin", redirect_url="/staff/login"
+    )
     employee = await EmployeeRepository(session).get_by_id(int(payload["sub"]))
     if employee is None or employee.status != EmployeeStatus.active:
         raise FrontendRedirect("/staff/login")
@@ -155,21 +150,9 @@ async def require_courier_from_cookie(
     request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> Employee:
-    token = request.cookies.get("access_token")
-    if not token:
-        raise FrontendRedirect("/staff/login")
-
-    try:
-        payload = verify_token(token)
-    except AuthError:
-        raise FrontendRedirect("/staff/login")
-
-    if payload.get("sub_type") != "employee":
-        raise FrontendRedirect("/staff/login")
-
-    if payload.get("role") != "courier":
-        raise FrontendRedirect("/staff/login")
-
+    payload = _parse_cookie_payload(
+        request, "employee", expected_role="courier", redirect_url="/staff/login"
+    )
     employee = await EmployeeRepository(session).get_by_id(int(payload["sub"]))
     if employee is None or employee.status != EmployeeStatus.active:
         raise FrontendRedirect("/staff/login")

@@ -14,10 +14,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/register", response_model=ClientRead, status_code=201)
 async def register(data: ClientCreate, session: AsyncSession = Depends(get_db)) -> Client:
     try:
-        new_client = await ClientService(session).create(data)
+        return await ClientService(session).create(data)
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
-    return new_client
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -41,6 +40,6 @@ async def staff_login(
     token = create_access_token(
         subject_id=employee.id,
         subject_type="employee",
-        role=employee.position.role.value,
+        role=employee.position.role,
     )
     return TokenResponse(access_token=token)

@@ -5,21 +5,25 @@ from decimal import Decimal
 from io import BytesIO
 
 from app.core.enums import OrderStatus, PaymentMethod
+from app.core.timezone import MSK
 from app.models import Order
 
-_STATUS_LABELS   = {"accepted": "Принят", "preparing": "Готовится", "on_the_way": "В пути", "delivered": "Доставлен", "canceled": "Отменён"}
-_DELIVERY_LABELS = {"delivery": "Доставка", "pickup": "Самовывоз"}
-_PAYMENT_LABELS  = {"cash": "Наличные", "card": "Карта", "online": "Онлайн"}
-
-_MSK_ZONE = None
-
-
-def _msk():
-    global _MSK_ZONE
-    if _MSK_ZONE is None:
-        from zoneinfo import ZoneInfo
-        _MSK_ZONE = ZoneInfo("Europe/Moscow")
-    return _MSK_ZONE
+_STATUS_LABELS = {
+    "accepted":   "Принят",
+    "preparing":  "Готовится",
+    "on_the_way": "В пути",
+    "delivered":  "Доставлен",
+    "canceled":   "Отменён",
+}
+_DELIVERY_LABELS = {
+    "delivery": "Доставка",
+    "pickup":   "Самовывоз",
+}
+_PAYMENT_LABELS = {
+    "cash":   "Наличные",
+    "card":   "Карта",
+    "online": "Онлайн",
+}
 
 
 @dataclass
@@ -112,13 +116,12 @@ def build_excel(orders: list[Order], date_from: date | None, date_to: date | Non
         cell.font = WHITE_FG
         cell.alignment = CENTER
 
-    msk = _msk()
     for order in orders:
         items_str    = ", ".join(f"{i.product.name} x{i.quantity}" for i in order.items)
         courier_name = order.courier.name if order.courier else "—"
         ws2.append([
             order.id,
-            order.created_at.astimezone(msk).strftime("%d.%m.%Y %H:%M"),
+            order.created_at.astimezone(MSK).strftime("%d.%m.%Y %H:%M"),
             order.client.name,
             items_str,
             float(order.total_price),
@@ -156,8 +159,7 @@ def _get_cyrillic_font() -> str:
     return "Helvetica"
 
 
-# Usable width on landscape A4 (297mm) with 15mm margins each side = 267mm
-_PAGE_W = 267
+_PAGE_W = 267  # usable width on landscape A4 with 15mm margins (mm)
 
 
 def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None) -> bytes:
@@ -213,14 +215,13 @@ def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None)
     )
     stats  = compute_stats(orders)
     period = f"{date_from or 'начало'} — {date_to or 'конец'}"
-    msk    = _msk()
+    doc.title = f"Отчёт пиццерии {period}"
 
     story: list = []
 
-    # ── Заголовок ─────────────────────────────────────────────────────────────
     story.append(Paragraph(
         "Отчёт пиццерии",
-        _style("title", fontSize=18, textColor=INDIGO, spaceAfter=2),
+        _style("title", fontSize=18, textColor=INDIGO, spaceAfter=11),
     ))
     story.append(Paragraph(
         f"Период: {period}",
@@ -228,7 +229,6 @@ def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None)
     ))
     story.append(Spacer(1, 7*mm))
 
-    # ── KPI-сводка: 4 равные ячейки на всю ширину ─────────────────────────────
     kpi_w = W / 4
     t_kpi = Table(
         [
@@ -261,7 +261,6 @@ def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None)
     story.append(t_kpi)
     story.append(Spacer(1, 7*mm))
 
-    # ── По статусам + По оплате рядом ─────────────────────────────────────────
     gap    = 9*mm
     pair_w = (W - gap) / 2
     lbl_w  = pair_w - 30*mm
@@ -289,7 +288,6 @@ def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None)
     ]))
     story.append(t_pair)
 
-    # ── Топ-10 товаров ────────────────────────────────────────────────────────
     if stats.top_products:
         story.append(Spacer(1, 5*mm))
         story.append(_section_label("Топ-10 товаров"))
@@ -299,11 +297,10 @@ def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None)
             [W - 35*mm, 35*mm],
         ))
 
-    # ── Заказы (новая страница) ────────────────────────────────────────────────
     story.append(PageBreak())
     story.append(Paragraph(
         "Отчёт пиццерии",
-        _style("title2", fontSize=14, textColor=INDIGO, spaceAfter=1),
+        _style("title2", fontSize=14, textColor=INDIGO, spaceAfter=9),
     ))
     story.append(Paragraph(
         f"Период: {period}  |  Заказы",
@@ -318,7 +315,7 @@ def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None)
         items_str = ", ".join(f"{i.product.name} x{i.quantity}" for i in o.items)
         rows.append([
             str(o.id),
-            o.created_at.astimezone(msk).strftime("%d.%m.%Y\n%H:%M"),
+            o.created_at.astimezone(MSK).strftime("%d.%m.%Y\n%H:%M"),
             o.client.name,
             items_str,
             f"{o.total_price:,.2f}",

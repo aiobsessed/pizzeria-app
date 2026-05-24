@@ -58,7 +58,7 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
             Очистить корзину
         </button>
     </div>
-    {# Polling: каждые 5 сек проверяем доступность товаров, OOB обновляет #cart-submit #}
+    {# Поллинг доступности товаров каждые 5s; OOB обновляет #cart-submit #}
     <div hx-get="/cart/status"
          hx-trigger="every 5s"
          hx-include="[name='promo_code']"
@@ -67,7 +67,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {# Cart items table #}
         <div class="lg:col-span-2">
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
@@ -103,7 +102,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
             </div>
         </div>
 
-        {# Order form #}
         <div class="lg:col-span-1">
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:sticky lg:top-6">
                 <h2 class="text-base font-bold text-gray-900 mb-4">Оформить заказ</h2>
@@ -115,7 +113,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">
                             Способ получения
                         </label>
-                        {# [FIX 2.4] px-3.5 unified with all sidebar inputs #}
                         <select name="delivery_type"
                                 x-model="delivery"
                                 class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
@@ -126,7 +123,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                         </select>
                     </div>
 
-                    {# [FIX 2.3] Explicit max-height transition eliminates layout jump on show/hide #}
                     <div x-show="delivery === 'delivery'"
                          x-transition:enter="transition-all duration-200 ease-out overflow-hidden"
                          x-transition:enter-start="max-h-0 opacity-0"
@@ -138,7 +134,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                             Адрес доставки
                         </label>
                         {% if addresses %}
-                        {# [FIX 2.4] px-3.5 #}
                         <select name="address_id"
                                 :disabled="delivery !== 'delivery'"
                                 class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
@@ -163,7 +158,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">
                             Способ оплаты
                         </label>
-                        {# [FIX 2.4] px-3.5 #}
                         <select name="payment_method"
                                 class="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm
                                        focus:outline-none focus:ring-2 focus:ring-orange-400
@@ -174,7 +168,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                         </select>
                     </div>
 
-                    {# ── Промокод ───────────────────────────────────────────── #}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">
                             Промокод
@@ -204,7 +197,6 @@ tr.htmx-swapping { opacity: 0; transition: opacity 0.3s ease; }
                         </div>
                         <div id="promo-result" class="min-h-[1.5rem]"></div>
                     </div>
-                    {# ───────────────────────────────────────────────────────── #}
 
                     <div id="cart-submit">
                         {% include "client/partials/cart_submit.html" %}

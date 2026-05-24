@@ -9,8 +9,8 @@ class PositionService:
     def __init__(self, session: AsyncSession) -> None:
         self.position_repo = PositionRepository(session)
 
-    async def get_all(self, name: str | None = None) -> list[Position]:
-        return await self.position_repo.get_all(name=name)
+    async def get_all(self) -> list[Position]:
+        return await self.position_repo.get_all()
 
     async def get_by_id(self, position_id: int) -> Position:
         position = await self.position_repo.get_by_id(position_id)

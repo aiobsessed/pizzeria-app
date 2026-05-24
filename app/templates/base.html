@@ -21,7 +21,6 @@
                 🍕 Пиццерия
             </a>
 
-            {# Desktop nav #}
             <div class="hidden sm:flex items-center gap-6">
                 {% block nav_links %}{% endblock %}
                 <form action="/logout" method="post">
@@ -32,7 +31,6 @@
                 </form>
             </div>
 
-            {# Mobile hamburger #}
             <button @click="open = !open"
                     class="sm:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                     aria-label="Меню">
@@ -47,7 +45,6 @@
             </button>
         </div>
 
-        {# Mobile dropdown menu #}
         <div x-show="open"
              x-transition:enter="transition ease-out duration-150"
              x-transition:enter-start="opacity-0 -translate-y-1"

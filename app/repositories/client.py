@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .base import BaseRepository
@@ -17,7 +15,6 @@ class ClientRepository(BaseRepository[Client]):
         email: str | None = None,
         phone: str | None = None,
         is_blocked: bool | None = None,
-        created_at: datetime | None = None,
     ) -> list[Client]:
         query = select(Client)
         if name is not None:
@@ -28,8 +25,6 @@ class ClientRepository(BaseRepository[Client]):
             query = query.where(Client.phone.ilike(f"%{phone}%"))
         if is_blocked is not None:
             query = query.where(Client.is_blocked == is_blocked)
-        if created_at is not None:
-            query = query.where(func.date(Client.created_at) == created_at.date())
         result = await self.session.execute(query)
         return result.scalars().all()
 
