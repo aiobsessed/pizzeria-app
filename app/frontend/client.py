@@ -490,6 +490,23 @@ async def cancel_order(
     return response
 
 
+# ── О нас ────────────────────────────────────────────────────────────────────
+
+
+@router.get("/about", response_class=HTMLResponse)
+async def about_page(
+    request: Request,
+    client: Client = Depends(require_client_from_cookie),
+    session: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    _, _, cart_count = await CartService(session).get_summary(client.id)
+    return templates.TemplateResponse(
+        request,
+        "client/about.html",
+        {"client": client, "cart_count": cart_count},
+    )
+
+
 # ── Профиль ───────────────────────────────────────────────────────────────────
 
 
