@@ -181,14 +181,14 @@
                         <p class="text-xs text-gray-400">{{ product.weight }} г</p>
                     </div>
                     <div class="flex items-center gap-2" @click.stop>
-                        <div class="flex items-center rounded-lg border border-gray-200 overflow-hidden shrink-0">
+                        <div class="flex items-center rounded-xl border border-gray-200 overflow-hidden shrink-0">
                             <button @click="qty = Math.max(1, qty - 1)"
-                                    class="w-7 h-7 flex items-center justify-center text-gray-500
+                                    class="w-9 h-9 flex items-center justify-center text-gray-500
                                            hover:bg-gray-50 transition-colors select-none">−</button>
                             <span x-text="qty"
-                                  class="w-7 text-center text-xs font-bold text-gray-800 select-none tabular-nums"></span>
+                                  class="w-8 text-center text-sm font-bold text-gray-800 select-none tabular-nums"></span>
                             <button @click="qty = Math.min(99, qty + 1)"
-                                    class="w-7 h-7 flex items-center justify-center text-gray-500
+                                    class="w-9 h-9 flex items-center justify-center text-gray-500
                                            hover:bg-gray-50 transition-colors select-none">+</button>
                         </div>
                         <button
@@ -196,8 +196,8 @@
                             hx-post="/cart/items"
                             hx-target="#cart-counter"
                             hx-swap="outerHTML"
-                            class="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
-                                   text-white text-xs font-semibold rounded-xl transition-colors">
+                            class="flex-1 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                                   text-white text-sm font-semibold rounded-xl transition-colors">
                             В корзину
                         </button>
                     </div>
