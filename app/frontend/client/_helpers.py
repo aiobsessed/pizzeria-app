@@ -26,13 +26,13 @@ def _cart_unavailable_names(items: list[CartItem]) -> list[str]:
 
 
 async def _resolve_promo(
-    code: str, items: list[CartItem], total: Decimal, session: AsyncSession
+    code: str, items: list[CartItem], total: Decimal, session: AsyncSession, client_id: int
 ) -> tuple[PromoPreview | None, str | None]:
     normalized = code.strip().upper()
     if not normalized:
         return None, None
     try:
-        preview = await PromoService(session).preview(normalized, items, total)
+        preview = await PromoService(session).preview(normalized, items, total, client_id)
         return preview, normalized
     except (NotFoundError, BusinessError):
         return None, None

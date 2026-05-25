@@ -107,11 +107,11 @@ _SEED_CATALOG = [
 # Пароль для всех демо-аккаунтов: Demo1234!
 
 _DEMO_CLIENTS = [
-    {"name": "Алексей Смирнов",   "email": "aleksey.smirnov@example.com",    "phone": "+79001234501"},
-    {"name": "Мария Иванова",      "email": "maria.ivanova@example.com",      "phone": "+79001234502"},
-    {"name": "Дмитрий Козлов",     "email": "dmitry.kozlov@example.com",      "phone": "+79001234503"},
-    {"name": "Екатерина Новикова", "email": "ekaterina.novikova@example.com", "phone": "+79001234504"},
-    {"name": "Сергей Петров",      "email": "sergey.petrov@example.com",      "phone": "+79001234505"},
+    {"name": "Алексей",   "email": "aleksey.smirnov@example.com",    "phone": "+79001234501"},
+    {"name": "Мария",     "email": "maria.ivanova@example.com",      "phone": "+79001234502"},
+    {"name": "Дмитрий",   "email": "dmitry.kozlov@example.com",      "phone": "+79001234503"},
+    {"name": "Екатерина", "email": "ekaterina.novikova@example.com", "phone": "+79001234504"},
+    {"name": "Сергей",    "email": "sergey.petrov@example.com",      "phone": "+79001234505"},
 ]
 
 _DEMO_COURIERS = [
@@ -138,6 +138,15 @@ _DEMO_PROMOS = [
         "discount_percent": Decimal("10.00"),
         "product_name": None,
         "max_usages": None,
+        "first_order_only": False,
+    },
+    {
+        "code": "NEWBIE20",
+        "promo_type": PromoType.order_discount,
+        "discount_percent": Decimal("20.00"),
+        "product_name": None,
+        "max_usages": None,
+        "first_order_only": True,
     },
     {
         "code": "PIZZA20",
@@ -145,6 +154,7 @@ _DEMO_PROMOS = [
         "discount_percent": Decimal("20.00"),
         "product_name": "Пицца Маргарита",
         "max_usages": 50,
+        "first_order_only": False,
     },
     {
         "code": "FREECOLA",
@@ -152,6 +162,7 @@ _DEMO_PROMOS = [
         "discount_percent": None,
         "product_name": "Кола",
         "max_usages": 100,
+        "first_order_only": False,
     },
     {
         "code": "SUMMER15",
@@ -159,6 +170,7 @@ _DEMO_PROMOS = [
         "discount_percent": Decimal("15.00"),
         "product_name": None,
         "max_usages": 100,
+        "first_order_only": False,
     },
     {
         "code": "BURGER30",
@@ -166,6 +178,7 @@ _DEMO_PROMOS = [
         "discount_percent": Decimal("30.00"),
         "product_name": "Бургер Классик",
         "max_usages": 30,
+        "first_order_only": False,
     },
 ]
 
@@ -360,6 +373,7 @@ async def seed_demo_data(session: AsyncSession) -> None:
             discount_percent=promo["discount_percent"],
             product_id=products[promo["product_name"]].id if promo["product_name"] else None,
             max_usages=promo["max_usages"],
+            first_order_only=promo["first_order_only"],
         ))
     await session.flush()
 

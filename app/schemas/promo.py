@@ -14,6 +14,7 @@ class PromoBase(BaseModel):
     max_usages: int | None = None
     expires_at: datetime | None = None
     is_active: bool = True
+    first_order_only: bool = False
 
     @model_validator(mode="after")
     def validate_fields_for_type(self) -> "PromoBase":
@@ -54,6 +55,7 @@ class PromoCreate(PromoBase):
 
 class PromoUpdate(BaseModel):
     is_active: bool | None = None
+    first_order_only: bool | None = None
     max_usages: int | None = None
     expires_at: datetime | None = None
 
@@ -73,7 +75,7 @@ class PromoPreview(BaseModel):
     promo_type: PromoType
     discount_amount: Decimal
     total_after: Decimal
-    product_id: int | None = None       # для item_discount и free_item — id целевого товара
-    free_product_name: str | None = None  # для free_item
+    product_id: int | None = None
+    free_product_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

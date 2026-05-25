@@ -43,10 +43,12 @@ class ClientService:
     # Client methods
     # -----------------------
     async def authenticate(self, login: str, password: str) -> Client:
-        if "@" in login:
-            client = await self.client_repo.get_by_email(login)
-        else:
-            client = await self.client_repo.get_by_phone(login)
+        normalized = login.lower() if "@" in login else login
+        client = await (
+            self.client_repo.get_by_email(normalized)
+            if "@" in login
+            else self.client_repo.get_by_phone(login)
+        )
         if client is None or not verify_password(password, client.hashed_password):
             raise AuthError("Invalid credentials")
         if client.is_blocked:
@@ -54,21 +56,26 @@ class ClientService:
         return client
 
     async def create(self, data: ClientCreate) -> Client:
-        if await self.client_repo.get_by_email(data.email) is not None:
+        normalized_email = data.email.lower()
+        if await self.client_repo.get_by_email(normalized_email) is not None:
             raise ConflictError("Email already registered")
         if await self.client_repo.get_by_phone(data.phone) is not None:
             raise ConflictError("Phone already registered")
 
         new_client = Client(
-            **data.model_dump(exclude={"password"}),
+            **data.model_dump(exclude={"password", "email"}),
+            email=normalized_email,
             hashed_password=hash_password(data.password),
         )
         return await self.client_repo.create(new_client)
 
     async def update(self, client: Client, data: ClientUpdate) -> Client:
-        if data.email is not None and data.email != client.email:
-            if await self.client_repo.get_by_email(data.email) is not None:
-                raise ConflictError("Email already registered")
+        if data.email is not None:
+            normalized_email = data.email.lower()
+            if normalized_email != client.email:
+                if await self.client_repo.get_by_email(normalized_email) is not None:
+                    raise ConflictError("Email already registered")
+            data = data.model_copy(update={"email": normalized_email})
 
         if data.phone is not None and data.phone != client.phone:
             if await self.client_repo.get_by_phone(data.phone) is not None:

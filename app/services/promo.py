@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PromoType
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
 from app.models.cart import CartItem
+from app.models.order import Order
 from app.models.promo import Promo
 from app.repositories.promo import PromoRepository
 from app.schemas.promo import PromoCreate, PromoPreview, PromoUpdate
@@ -13,6 +15,7 @@ from app.schemas.promo import PromoCreate, PromoPreview, PromoUpdate
 
 class PromoService:
     def __init__(self, session: AsyncSession) -> None:
+        self._session = session
         self.repo = PromoRepository(session)
 
     # ─── Admin ───────────────────────────────────────────────────────────────
@@ -43,13 +46,17 @@ class PromoService:
 
     # ─── Client ──────────────────────────────────────────────────────────────
 
-    async def preview(self, code: str, cart_items: list[CartItem], total: Decimal) -> PromoPreview:
-        promo = await self._get_applicable(code)
+    async def preview(
+        self, code: str, cart_items: list[CartItem], total: Decimal, client_id: int
+    ) -> PromoPreview:
+        promo = await self._get_applicable(code, client_id)
         return self._calculate_preview(promo, cart_items, total)
 
-    async def apply(self, code: str, cart_items: list[CartItem], total: Decimal) -> tuple[Promo, PromoPreview]:
+    async def apply(
+        self, code: str, cart_items: list[CartItem], total: Decimal, client_id: int
+    ) -> tuple[Promo, PromoPreview]:
         """Возвращает (promo, preview). Инкремент used_count — при сохранении заказа."""
-        promo = await self._get_applicable(code)
+        promo = await self._get_applicable(code, client_id)
         preview = self._calculate_preview(promo, cart_items, total)
         return promo, preview
 
@@ -61,7 +68,7 @@ class PromoService:
 
     # ─── Internal ────────────────────────────────────────────────────────────
 
-    async def _get_applicable(self, code: str) -> Promo:
+    async def _get_applicable(self, code: str, client_id: int) -> Promo:
         promo = await self.repo.get_by_code(code)
         if promo is None or not promo.is_active:
             raise NotFoundError("Промокод не найден или неактивен")
@@ -71,6 +78,8 @@ class PromoService:
         if promo.max_usages is not None and promo.used_count >= promo.max_usages:
             await self._deactivate(promo)
             raise BusinessError("Промокод исчерпал лимит использований")
+        if promo.first_order_only and await self._client_has_orders(client_id):
+            raise BusinessError("Промокод доступен только для первого заказа")
         return promo
 
     def _is_stale(self, promo: Promo) -> bool:
@@ -81,6 +90,12 @@ class PromoService:
     async def _deactivate(self, promo: Promo) -> None:
         promo.is_active = False
         await self.repo.update(promo)
+
+    async def _client_has_orders(self, client_id: int) -> bool:
+        count = await self._session.scalar(
+            select(func.count()).select_from(Order).where(Order.client_id == client_id)
+        )
+        return (count or 0) > 0
 
     def _calculate_preview(
         self, promo: Promo, cart_items: list[CartItem], total: Decimal

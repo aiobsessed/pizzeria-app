@@ -122,7 +122,7 @@ def build_excel(orders: list[Order], date_from: date | None, date_to: date | Non
         ws2.append([
             order.id,
             order.created_at.astimezone(MSK).strftime("%d.%m.%Y %H:%M"),
-            order.client.name,
+            order.client.email,
             items_str,
             float(order.total_price),
             _STATUS_LABELS[order.status.value],
@@ -308,16 +308,17 @@ def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None)
     ))
     story.append(Spacer(1, 4*mm))
 
-    # 12 + 26 + 34 + 107 + 22 + 22 + 22 + 22 = 267mm = W
-    col_widths = [12*mm, 26*mm, 34*mm, 107*mm, 22*mm, 22*mm, 22*mm, 22*mm]
+    # 10 + 24 + 46 + 97 + 22 + 22 + 22 + 24 = 267mm = W
+    col_widths = [10*mm, 24*mm, 46*mm, 97*mm, 22*mm, 22*mm, 22*mm, 24*mm]
+    cell_style = _style("cell", fontSize=8, leading=10)
     rows = [["#", "Дата", "Клиент", "Позиции", "Итого, руб.", "Статус", "Доставка", "Оплата"]]
     for o in orders:
         items_str = ", ".join(f"{i.product.name} x{i.quantity}" for i in o.items)
         rows.append([
             str(o.id),
             o.created_at.astimezone(MSK).strftime("%d.%m.%Y\n%H:%M"),
-            o.client.name,
-            items_str,
+            Paragraph(o.client.email, cell_style),
+            Paragraph(items_str, cell_style),
             f"{o.total_price:,.2f}",
             _STATUS_LABELS[o.status.value],
             _DELIVERY_LABELS[o.delivery_type.value],

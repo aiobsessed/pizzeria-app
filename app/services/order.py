@@ -130,7 +130,7 @@ class OrderService:
 
         promo = None
         if promo_code:
-            promo, preview = await self.promo_service.apply(promo_code, cart_items, total_price)
+            promo, preview = await self.promo_service.apply(promo_code, cart_items, total_price, client_id)
             total_price = preview.total_after
 
         order = await self.order_repo.create(

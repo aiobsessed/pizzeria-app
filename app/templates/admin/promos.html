@@ -10,21 +10,23 @@
     'order_discount': 'Скидка на заказ'
 } %}
 
-{% set any_filter = filter_code or filter_promo_type or filter_is_active %}
+{% set any_filter = filter_code or filter_promo_type or filter_is_active or filter_first_order_only %}
 
 <div x-data="{
     open: false,
     isEdit: false,
     form: {
         id: null, code: '', promo_type: 'order_discount',
-        discount_percent: '', product_id: '', max_usages: '', expires_at: '', is_active: true
+        discount_percent: '', product_id: '', max_usages: '', expires_at: '',
+        is_active: true, first_order_only: false
     },
     get needsProduct()  { return this.form.promo_type === 'free_item' || this.form.promo_type === 'item_discount'; },
     get needsDiscount() { return this.form.promo_type === 'item_discount' || this.form.promo_type === 'order_discount'; },
     openCreate() {
         this.form = {
             id: null, code: '', promo_type: 'order_discount',
-            discount_percent: '', product_id: '', max_usages: '', expires_at: '', is_active: true
+            discount_percent: '', product_id: '', max_usages: '', expires_at: '',
+            is_active: true, first_order_only: false
         };
         this.isEdit = false;
         this.open = true;
@@ -66,6 +68,13 @@
         <option value="false" {{ 'selected' if filter_is_active == 'false' }}>Неактивные</option>
     </select>
 
+    <select name="first_order_only"
+            class="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white text-gray-700
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">Без ограничений</option>
+        <option value="true" {{ 'selected' if filter_first_order_only == 'true' }}>Только первый заказ</option>
+    </select>
+
     <div class="flex gap-2">
         <button type="submit"
                 class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium
@@ -94,6 +103,7 @@
                 <tr>
                     <th class="text-left font-medium text-gray-500 px-4 py-3">Код</th>
                     <th class="text-left font-medium text-gray-500 px-4 py-3">Тип</th>
+                    <th class="text-center font-medium text-gray-500 px-4 py-3">Первый заказ</th>
                     <th class="text-left font-medium text-gray-500 px-4 py-3">Скидка</th>
                     <th class="text-left font-medium text-gray-500 px-4 py-3">Товар</th>
                     <th class="text-center font-medium text-gray-500 px-4 py-3">Использований</th>
@@ -107,6 +117,13 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 font-mono font-semibold text-gray-900 tracking-wide">{{ promo.code }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ type_labels[promo.promo_type.value] }}</td>
+                    <td class="px-4 py-3 text-center">
+                        {% if promo.first_order_only %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200">Да</span>
+                        {% else %}
+                        <span class="text-gray-400 text-xs">—</span>
+                        {% endif %}
+                    </td>
                     <td class="px-4 py-3 tabular-nums text-gray-700">
                         {% if promo.discount_percent %}{{ promo.discount_percent }}%{% else %}—{% endif %}
                     </td>
@@ -140,6 +157,7 @@
                         <button @click="openEdit({
                                 id: {{ promo.id }},
                                 is_active: {{ 'true' if promo.is_active else 'false' }},
+                                first_order_only: {{ 'true' if promo.first_order_only else 'false' }},
                                 max_usages: '{{ promo.max_usages or '' }}',
                                 expires_at: '{{ promo.expires_at.strftime('%Y-%m-%dT%H:%M') if promo.expires_at else '' }}'
                             })"
@@ -232,12 +250,24 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-2">
-                <input type="checkbox" name="is_active" id="promo_is_active"
-                       :checked="form.is_active"
-                       @change="form.is_active = $event.target.checked"
-                       class="rounded text-indigo-600">
-                <label for="promo_is_active" class="text-sm font-medium text-gray-700">Активен</label>
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" name="is_active" id="promo_is_active"
+                           :checked="form.is_active"
+                           @change="form.is_active = $event.target.checked"
+                           class="rounded text-indigo-600">
+                    <label for="promo_is_active" class="text-sm font-medium text-gray-700">Активен</label>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" name="first_order_only" id="promo_first_order_only"
+                           :checked="form.first_order_only"
+                           @change="form.first_order_only = $event.target.checked"
+                           class="rounded text-indigo-600">
+                    <label for="promo_first_order_only" class="text-sm font-medium text-gray-700">
+                        Только для первого заказа
+                    </label>
+                </div>
             </div>
 
             <div class="flex gap-3 pt-2">

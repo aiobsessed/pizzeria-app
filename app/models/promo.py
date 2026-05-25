@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -25,9 +25,10 @@ class Promo(Base):
     # Целевой товар (free_item / item_discount), None для order_discount
     product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))
 
-    max_usages: Mapped[int | None]   # None = безлимит
+    max_usages: Mapped[int | None]
     used_count: Mapped[int] = mapped_column(default=0, server_default="0")
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_active: Mapped[bool] = mapped_column(default=True, server_default="true")
+    first_order_only: Mapped[bool] = mapped_column(default=False, server_default="false")
 
     product: Mapped[Product | None] = relationship()

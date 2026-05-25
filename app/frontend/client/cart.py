@@ -53,7 +53,7 @@ async def cart_status_partial(
 ) -> HTMLResponse:
     items, total, _ = await CartService(session).get_summary(client.id)
     unavailable_names = _cart_unavailable_names(items)
-    preview, code = await _resolve_promo(promo_code, items, total, session)
+    preview, code = await _resolve_promo(promo_code, items, total, session, client.id)
     return templates.TemplateResponse(
         request,
         "client/partials/cart_rows_oob.html",
@@ -120,7 +120,7 @@ async def update_cart_item(
     items, total, cart_count = await CartService(session).get_summary(client.id)
     updated_item = next((i for i in items if i.id == item_id), None)
     unavailable_names = _cart_unavailable_names(items)
-    preview, code = await _resolve_promo(promo_code, items, total, session)
+    preview, code = await _resolve_promo(promo_code, items, total, session, client.id)
 
     return templates.TemplateResponse(
         request,
@@ -167,7 +167,7 @@ async def delete_cart_item(
 
     items, total, cart_count = await CartService(session).get_summary(client.id)
     unavailable_names = _cart_unavailable_names(items)
-    preview, code = await _resolve_promo(promo_code, items, total, session)
+    preview, code = await _resolve_promo(promo_code, items, total, session, client.id)
 
     return templates.TemplateResponse(
         request,
@@ -192,7 +192,7 @@ async def promo_preview(
 ) -> HTMLResponse:
     items, total, _ = await CartService(session).get_summary(client.id)
     try:
-        preview = await PromoService(session).preview(code.strip(), items, total)
+        preview = await PromoService(session).preview(code.strip(), items, total, client.id)
         return templates.TemplateResponse(
             request,
             "client/partials/promo_preview.html",
