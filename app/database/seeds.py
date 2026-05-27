@@ -115,11 +115,11 @@ _DEMO_CLIENTS = [
 ]
 
 _DEMO_COURIERS = [
-    {"name": "Иван Курьеров",    "email": "ivan.courier@example.com",    "phone": "79002234501", "inn": "620100000001"},
-    {"name": "Павел Быстров",    "email": "pavel.bystrov@example.com",   "phone": "79002234502", "inn": "620100000002"},
-    {"name": "Ольга Доставкина", "email": "olga.dostavkina@example.com", "phone": "79002234503", "inn": "620100000003"},
-    {"name": "Андрей Скоков",    "email": "andrey.skokov@example.com",   "phone": "79002234504", "inn": "620100000004"},
-    {"name": "Юлия Трекова",     "email": "yuliya.trekova@example.com",  "phone": "79002234505", "inn": "620100000005"},
+    {"name": "Иван",    "email": "ivan.courier@example.com",    "phone": "79002234501", "inn": "620100000001"},
+    {"name": "Павел",    "email": "pavel.bystrov@example.com",   "phone": "79002234502", "inn": "620100000002"},
+    {"name": "Ольга", "email": "olga.dostavkina@example.com", "phone": "79002234503", "inn": "620100000003"},
+    {"name": "Андрей",    "email": "andrey.skokov@example.com",   "phone": "79002234504", "inn": "620100000004"},
+    {"name": "Юлия",     "email": "yuliya.trekova@example.com",  "phone": "79002234505", "inn": "620100000005"},
 ]
 
 _DEMO_ADDRESSES = [
