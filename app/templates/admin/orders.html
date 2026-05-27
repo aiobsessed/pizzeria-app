@@ -114,4 +114,112 @@
     {% include "admin/partials/orders_rows.html" %}
 </div>
 
+{# ── Order items modal ── lives outside the polling container so polling never destroys it #}
+<div x-data="{
+         open:     false,
+         orderId:  null,
+         total:    '',
+         subtotal: '',
+         promo:    null,
+         items:    [],
+         get discount() {
+             const diff = parseFloat(this.subtotal) - parseFloat(this.total);
+             return diff > 0.001 ? diff : 0;
+         }
+     }"
+     @show-order.window="
+         orderId  = $event.detail.id;
+         total    = $event.detail.total;
+         subtotal = $event.detail.subtotal;
+         promo    = $event.detail.promo;
+         items    = $event.detail.items;
+         open     = true;
+     "
+     @keydown.escape.window="open = false"
+     x-show="open"
+     style="display:none"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4">
+
+    <div @click="open = false" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+    <div @click.stop
+         class="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[88vh] flex flex-col">
+
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+            <h2 class="font-semibold text-gray-900">
+                Состав заказа
+                <span class="font-mono text-indigo-600 ml-1">#<span x-text="orderId"></span></span>
+            </h2>
+            <button @click="open = false"
+                    class="text-gray-400 hover:text-gray-600 transition-colors rounded-lg p-1 hover:bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                          clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="overflow-y-auto flex-1 px-6 py-4">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-xs text-gray-400 border-b border-gray-100">
+                        <th class="text-left font-medium pb-2">Товар</th>
+                        <th class="text-right font-medium pb-2 pl-4">Кол-во</th>
+                        <th class="text-right font-medium pb-2 pl-4">Цена</th>
+                        <th class="text-right font-medium pb-2 pl-4">Итого</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="item in items" :key="item.name">
+                        <tr class="border-b border-gray-50 last:border-0">
+                            <td class="py-2.5 pr-4 text-gray-800" x-text="item.name"></td>
+                            <td class="py-2.5 pl-4 text-right tabular-nums text-gray-500"
+                                x-text="item.qty + ' шт.'"></td>
+                            <td class="py-2.5 pl-4 text-right tabular-nums text-gray-500"
+                                x-text="item.price + ' ₽'"></td>
+                            <td class="py-2.5 pl-4 text-right tabular-nums font-medium text-gray-900"
+                                x-text="(parseFloat(item.price) * item.qty).toFixed(2) + ' ₽'"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl shrink-0 space-y-2">
+
+            <template x-if="promo">
+                <div class="flex items-center gap-2 pb-2 border-b border-gray-200">
+                    <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Промокод</span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                        </svg>
+                        <span x-text="promo.code"></span>
+                    </span>
+                    <span class="text-xs text-gray-400" x-text="promo.label"></span>
+                </div>
+            </template>
+
+            <template x-if="discount > 0">
+                <div class="space-y-1.5 pb-2 border-b border-gray-200">
+                    <div class="flex justify-between text-sm text-gray-500">
+                        <span>Сумма без скидки</span>
+                        <span x-text="subtotal + ' ₽'"></span>
+                    </div>
+                    <div class="flex justify-between text-sm font-medium text-emerald-600">
+                        <span>Скидка</span>
+                        <span x-text="'−' + discount.toFixed(2) + ' ₽'"></span>
+                    </div>
+                </div>
+            </template>
+
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-500">Итого</span>
+                <span class="font-semibold text-gray-900" x-text="total + ' ₽'"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

@@ -31,6 +31,7 @@ class OrderRepository(BaseRepository[Order]):
                 selectinload(Order.client),
                 selectinload(Order.address),
                 selectinload(Order.courier),
+                selectinload(Order.promo),
             )
             .order_by(Order.created_at.desc())
         )
@@ -63,6 +64,7 @@ class OrderRepository(BaseRepository[Order]):
                 selectinload(Order.client),
                 selectinload(Order.address),
                 selectinload(Order.courier),
+                selectinload(Order.promo),
             )
             .where(Order.id == order_id)
         )

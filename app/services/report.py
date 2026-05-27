@@ -40,7 +40,7 @@ class ReportStats:
 def compute_stats(orders: list[Order]) -> ReportStats:
     delivered = [o for o in orders if o.status == OrderStatus.delivered]
     qty: Counter = Counter()
-    for order in orders:
+    for order in delivered:
         for item in order.items:
             qty[item.product.name] += item.quantity
     return ReportStats(
