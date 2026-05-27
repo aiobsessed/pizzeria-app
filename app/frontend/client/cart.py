@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_flash, require_client_from_cookie
+from app.core.enums import PromoType
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
 from app.frontend.templates import templates
 from app.models import Client
@@ -118,9 +119,9 @@ async def update_cart_item(
         return HTMLResponse("", status_code=404)
 
     items, total, cart_count = await CartService(session).get_summary(client.id)
+    preview, code = await _resolve_promo(promo_code, items, total, session, client.id)
     updated_item = next((i for i in items if i.id == item_id), None)
     unavailable_names = _cart_unavailable_names(items)
-    preview, code = await _resolve_promo(promo_code, items, total, session, client.id)
 
     return templates.TemplateResponse(
         request,
@@ -190,9 +191,12 @@ async def promo_preview(
     client: Client = Depends(require_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    items, total, _ = await CartService(session).get_summary(client.id)
+    cart_service = CartService(session)
+    items, total, _ = await cart_service.get_summary(client.id)
     try:
         preview = await PromoService(session).preview(code.strip(), items, total, client.id)
+        if preview.promo_type == PromoType.free_item:
+            items, total, _ = await cart_service.get_summary(client.id)
         return templates.TemplateResponse(
             request,
             "client/partials/promo_preview.html",

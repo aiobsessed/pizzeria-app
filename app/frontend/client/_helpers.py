@@ -32,7 +32,9 @@ async def _resolve_promo(
     if not normalized:
         return None, None
     try:
-        preview = await PromoService(session).preview(normalized, items, total, client_id)
+        preview = await PromoService(session).preview(
+            normalized, items, total, client_id, ensure_item=False
+        )
         return preview, normalized
     except (NotFoundError, BusinessError):
         return None, None

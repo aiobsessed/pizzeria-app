@@ -6,9 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import PromoType
 from app.core.exceptions import BusinessError, ConflictError, NotFoundError
-from app.models.cart import CartItem
+from app.models.cart import Cart, CartItem
 from app.models.order import Order
 from app.models.promo import Promo
+from app.repositories.cart import CartRepository
+from app.repositories.cart_item import CartItemRepository
 from app.repositories.promo import PromoRepository
 from app.schemas.promo import PromoCreate, PromoPreview, PromoUpdate
 
@@ -17,6 +19,8 @@ class PromoService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self.repo = PromoRepository(session)
+        self._cart_repo = CartRepository(session)
+        self._cart_item_repo = CartItemRepository(session)
 
     # ─── Admin ───────────────────────────────────────────────────────────────
 
@@ -47,9 +51,18 @@ class PromoService:
     # ─── Client ──────────────────────────────────────────────────────────────
 
     async def preview(
-        self, code: str, cart_items: list[CartItem], total: Decimal, client_id: int
+        self,
+        code: str,
+        cart_items: list[CartItem],
+        total: Decimal,
+        client_id: int,
+        *,
+        ensure_item: bool = True,
     ) -> PromoPreview:
         promo = await self._get_applicable(code, client_id)
+        if promo.promo_type == PromoType.free_item and ensure_item:
+            cart_items = await self._ensure_free_item_in_cart(client_id, promo)
+            total = sum((i.quantity * i.product.price for i in cart_items), Decimal(0))
         return self._calculate_preview(promo, cart_items, total)
 
     async def apply(
@@ -67,6 +80,21 @@ class PromoService:
         await self.repo.update(promo)
 
     # ─── Internal ────────────────────────────────────────────────────────────
+
+    async def _ensure_free_item_in_cart(self, client_id: int, promo: Promo) -> list[CartItem]:
+        """Добавляет товар из промокода в корзину если отсутствует.
+        Существующее количество не трогает — скидка всегда на 1 единицу."""
+        cart = await self._cart_repo.get_by_client(client_id)
+        if cart is None:
+            cart = await self._cart_repo.create(Cart(client_id=client_id))
+
+        existing = await self._cart_item_repo.get_by_cart_and_product(cart.id, promo.product_id)
+        if existing is None:
+            await self._cart_item_repo.create(
+                CartItem(cart_id=cart.id, product_id=promo.product_id, quantity=1)
+            )
+
+        return await self._cart_item_repo.get_by_cart(cart.id)
 
     async def _get_applicable(self, code: str, client_id: int) -> Promo:
         promo = await self.repo.get_by_code(code)
@@ -117,13 +145,10 @@ class PromoService:
                     raise BusinessError("Товар из промокода отсутствует в корзине")
 
             case PromoType.free_item:
-                for item in cart_items:
-                    if item.product_id == promo.product_id:
-                        discount = item.product.price.quantize(Decimal("0.01"))
-                        free_product_name = item.product.name
-                        break
-                if discount == 0:
+                if not any(i.product_id == promo.product_id for i in cart_items):
                     raise BusinessError("Товар из промокода отсутствует в корзине")
+                discount = promo.product.price.quantize(Decimal("0.01"))
+                free_product_name = promo.product.name
 
         return PromoPreview(
             promo_id=promo.id,
