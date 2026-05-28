@@ -49,7 +49,7 @@ def compute_stats(orders: list[Order]) -> ReportStats:
         cancelled_count = sum(1 for o in orders if o.status == OrderStatus.canceled),
         revenue         = sum((o.total_price for o in delivered), Decimal(0)),
         by_status       = {s: sum(1 for o in orders if o.status == s) for s in OrderStatus},
-        by_payment      = {m: sum(1 for o in orders if o.payment_method == m) for m in PaymentMethod},
+        by_payment      = {m: sum(1 for o in delivered if o.payment_method == m) for m in PaymentMethod},
         top_products    = qty.most_common(10),
     )
 
@@ -90,7 +90,7 @@ def build_excel(orders: list[Order], date_from: date | None, date_to: date | Non
         ws.append([_STATUS_LABELS[status.value], cnt])
 
     ws.append([])
-    ws.append(["Способ оплаты", "Количество"])
+    ws.append(["Способ оплаты (только доставленные)", "Количество"])
     for cell in ws[ws.max_row]:
         cell.fill = INDIGO
         cell.font = WHITE_FG
@@ -98,14 +98,14 @@ def build_excel(orders: list[Order], date_from: date | None, date_to: date | Non
         ws.append([_PAYMENT_LABELS[method.value], cnt])
 
     ws.append([])
-    ws.append(["Товар", "Продано (шт.)"])
+    ws.append(["Товар (только доставленные)", "Продано (шт.)"])
     for cell in ws[ws.max_row]:
         cell.fill = INDIGO
         cell.font = WHITE_FG
     for name, qty in stats.top_products:
         ws.append([name, qty])
 
-    ws.column_dimensions["A"].width = 35
+    ws.column_dimensions["A"].width = 40
     ws.column_dimensions["B"].width = 20
 
     ws2 = wb.create_sheet("Заказы")
@@ -278,6 +278,10 @@ def build_pdf(orders: list[Order], date_from: date | None, date_to: date | None)
     )
 
     story.append(_section_label("Аналитика"))
+    story.append(Paragraph(
+        "Способ оплаты и топ товаров — только по доставленным заказам",
+        _style("delivered_note", fontSize=7, textColor=GRAY_TEXT, spaceAfter=4),
+    ))
     t_pair = Table([[t_status, "", t_payment]], colWidths=[pair_w, gap, pair_w])
     t_pair.setStyle(TableStyle([
         ("LEFTPADDING",   (0, 0), (-1, -1), 0),

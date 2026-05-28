@@ -126,16 +126,17 @@
         {% endif %}
     </div>
 
-    {# Orders by payment method #}
+    {# Orders by payment method — delivered only #}
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h2 class="text-base font-bold text-gray-900 mb-4">По способу оплаты</h2>
-        {% if stats.total_orders == 0 %}
+        <h2 class="text-base font-bold text-gray-900 mb-0.5">По способу оплаты</h2>
+        <p class="text-xs text-gray-400 mb-4">Только доставленные заказы</p>
+        {% if stats.delivered_count == 0 %}
         <p class="text-sm text-gray-400 text-center py-6">Нет данных</p>
         {% else %}
         <div class="space-y-3">
             {% for method in PaymentMethod %}
             {% set cnt = stats.by_payment[method] %}
-            {% set pct = (cnt / stats.total_orders * 100) | round(1) if stats.total_orders else 0 %}
+            {% set pct = (cnt / stats.delivered_count * 100) | round(1) if stats.delivered_count else 0 %}
             <div>
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-sm text-gray-700 font-medium">{{ PAYMENT_LABELS[method.value] }}</span>
@@ -151,9 +152,10 @@
         {% endif %}
     </div>
 
-    {# Top products #}
+    {# Top products — delivered only #}
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h2 class="text-base font-bold text-gray-900 mb-4">Топ товаров</h2>
+        <h2 class="text-base font-bold text-gray-900 mb-0.5">Топ товаров</h2>
+        <p class="text-xs text-gray-400 mb-4">Только доставленные заказы</p>
         {% if not stats.top_products %}
         <p class="text-sm text-gray-400 text-center py-6">Нет данных</p>
         {% else %}
