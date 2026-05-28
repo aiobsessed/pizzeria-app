@@ -1,6 +1,9 @@
+import uuid
 from decimal import Decimal
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, Request
+import aiofiles
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +16,22 @@ from app.schemas.reorder import ReorderItem
 from app.services import CategoryService, ProductService
 
 router = APIRouter()
+
+_UPLOAD_DIR = Path("app/static/img")
+_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+
+async def _save_uploaded_image(file: UploadFile | None) -> str | None:
+    if not file or not file.filename:
+        return None
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in _ALLOWED_EXTENSIONS:
+        suffix = ".webp"
+    _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{suffix}"
+    async with aiofiles.open(_UPLOAD_DIR / filename, "wb") as f:
+        await f.write(await file.read())
+    return f"/static/img/{filename}"
 
 
 @router.get("/products", response_class=HTMLResponse)
@@ -54,17 +73,18 @@ async def products_page(
 @router.post("/products/create")
 async def create_product(
     request: Request,
-    name: str         = Form(),
-    category_id: int  = Form(),
-    weight: int       = Form(),
-    price: str        = Form(),
-    description: str  = Form(default=""),
-    composition: str  = Form(default=""),
-    image_url: str    = Form(default=""),
-    is_available: str = Form(default=""),
-    _: Employee       = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
+    name: str                = Form(),
+    category_id: int         = Form(),
+    weight: int              = Form(),
+    price: str               = Form(),
+    description: str         = Form(default=""),
+    composition: str         = Form(default=""),
+    is_available: str        = Form(default=""),
+    image: UploadFile | None = File(default=None),
+    _: Employee              = Depends(require_admin_from_cookie),
+    session: AsyncSession    = Depends(get_db),
 ) -> RedirectResponse:
+    image_url = await _save_uploaded_image(image)
     try:
         await ProductService(session).create(
             ProductCreate(
@@ -74,7 +94,7 @@ async def create_product(
                 price=Decimal(price),
                 description=description.strip() or None,
                 composition=composition.strip() or None,
-                image_url=image_url.strip() or None,
+                image_url=image_url,
                 is_available=is_available == "on",
             )
         )
@@ -88,17 +108,20 @@ async def create_product(
 async def update_product(
     request: Request,
     product_id: int,
-    name: str         = Form(),
-    category_id: int  = Form(),
-    weight: int       = Form(),
-    price: str        = Form(),
-    description: str  = Form(default=""),
-    composition: str  = Form(default=""),
-    image_url: str    = Form(default=""),
-    is_available: str = Form(default=""),
-    _: Employee       = Depends(require_admin_from_cookie),
-    session: AsyncSession = Depends(get_db),
+    name: str                = Form(),
+    category_id: int         = Form(),
+    weight: int              = Form(),
+    price: str               = Form(),
+    description: str         = Form(default=""),
+    composition: str         = Form(default=""),
+    is_available: str        = Form(default=""),
+    current_image_url: str   = Form(default=""),
+    image: UploadFile | None = File(default=None),
+    _: Employee              = Depends(require_admin_from_cookie),
+    session: AsyncSession    = Depends(get_db),
 ) -> RedirectResponse:
+    new_image_url = await _save_uploaded_image(image)
+    image_url = new_image_url or current_image_url.strip() or None
     try:
         await ProductService(session).update(
             product_id,
@@ -109,7 +132,7 @@ async def update_product(
                 price=Decimal(price),
                 description=description.strip() or None,
                 composition=composition.strip() or None,
-                image_url=image_url.strip() or None,
+                image_url=image_url,
                 is_available=is_available == "on",
             ),
         )
