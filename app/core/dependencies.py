@@ -122,6 +122,23 @@ async def require_courier(employee: Employee = Depends(get_current_employee)) ->
 # ── Поток: Frontend (Cookie token) ────────────────────────────────────────────
 
 
+async def optional_client_from_cookie(
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> Client | None:
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+    try:
+        payload = verify_token(token)
+        if payload.get("sub_type") != "client":
+            return None
+        client = await ClientRepository(session).get_by_id(int(payload["sub"]))
+        return client if client and not client.is_blocked else None
+    except AuthError:
+        return None
+
+
 async def require_client_from_cookie(
     request: Request,
     session: AsyncSession = Depends(get_db),

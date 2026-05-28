@@ -78,10 +78,18 @@
                         <button @click="
                                     fetch('/cart/items', {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                        headers: {
+                                            'Content-Type': 'application/x-www-form-urlencoded',
+                                            'HX-Request': 'true',
+                                        },
                                         body: 'product_id=' + _snap.id + '&quantity=' + qty
                                     })
                                     .then(async r => {
+                                        if (r.status === 401) {
+                                            const redirect = r.headers.get('HX-Redirect');
+                                            if (redirect) window.location.href = redirect;
+                                            return;
+                                        }
                                         const html = await r.text();
                                         const triggerHeader = r.headers.get('HX-Trigger');
                                         let isSuccess = true;
@@ -191,13 +199,54 @@
                                     class="w-9 h-9 flex items-center justify-center text-gray-500
                                            hover:bg-gray-50 transition-colors select-none">+</button>
                         </div>
-                        <button
-                            :hx-vals='JSON.stringify({ product_id: id, quantity: qty })'
-                            hx-post="/cart/items"
-                            hx-target="#cart-counter"
-                            hx-swap="outerHTML"
-                            class="flex-1 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
-                                   text-white text-sm font-semibold rounded-xl transition-colors">
+                        <button @click="
+                                    fetch('/cart/items', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/x-www-form-urlencoded',
+                                            'HX-Request': 'true',
+                                        },
+                                        body: 'product_id=' + id + '&quantity=' + qty
+                                    })
+                                    .then(async r => {
+                                        if (r.status === 401) {
+                                            const redirect = r.headers.get('HX-Redirect');
+                                            if (redirect) window.location.href = redirect;
+                                            return;
+                                        }
+                                        const html = await r.text();
+                                        const triggerHeader = r.headers.get('HX-Trigger');
+                                        if (triggerHeader) {
+                                            const triggers = JSON.parse(triggerHeader);
+                                            if (triggers.showflash) {
+                                                document.dispatchEvent(new CustomEvent('showflash', {
+                                                    detail: triggers.showflash,
+                                                    bubbles: true,
+                                                }));
+                                                if (!triggers.showflash.success) {
+                                                    const path = window.location.pathname;
+                                                    const isIndex = path === '/';
+                                                    const slug = path.match(/\/menu\/([^/]+)/)?.[1];
+                                                    htmx.ajax(
+                                                        'GET',
+                                                        isIndex ? '/' : (slug ? '/menu/' + slug : '/menu'),
+                                                        { target: isIndex ? '#index-content' : '#product-grid', swap: 'innerHTML' }
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        const counter = document.getElementById('cart-counter');
+                                        if (counter) counter.outerHTML = html;
+                                    })
+                                    .catch(() => {
+                                        document.dispatchEvent(new CustomEvent('showflash', {
+                                            detail: { message: 'Не удалось добавить товар. Попробуйте позже.', success: false },
+                                            bubbles: true,
+                                        }));
+                                    });
+                                "
+                                class="flex-1 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700
+                                       text-white text-sm font-semibold rounded-xl transition-colors">
                             В корзину
                         </button>
                     </div>

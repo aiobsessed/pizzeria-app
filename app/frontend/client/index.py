@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db, get_flash, require_client_from_cookie
+from app.core.dependencies import get_db, get_flash, optional_client_from_cookie
 from app.frontend.templates import templates
 from app.models import Client
 from app.services import CartService, CategoryService, ProductService
@@ -15,19 +15,21 @@ router = APIRouter()
 @router.get("/", response_class=HTMLResponse)
 async def index(
     request: Request,
-    client: Client = Depends(require_client_from_cookie),
+    client: Client | None = Depends(optional_client_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
     categories = await CategoryService(session).get_all_active()
     products = await ProductService(session).get_all_available()
-    _, _, cart_count = await CartService(session).get_summary(client.id)
+    cart_count = 0
+    if client:
+        _, _, cart_count = await CartService(session).get_summary(client.id)
 
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(
             request,
             "client/partials/index_htmx.html",
-            {"categories": categories, "products": products},
+            {"categories": categories, "products": products, "client": client},
         )
 
     response = templates.TemplateResponse(
@@ -50,7 +52,7 @@ async def index(
 async def menu(
     request: Request,
     category_slug: str | None = None,
-    client: Client = Depends(require_client_from_cookie),
+    client: Client | None = Depends(optional_client_from_cookie),
     session: AsyncSession = Depends(get_db),
     flash: str | None = Depends(get_flash),
 ) -> HTMLResponse:
@@ -67,9 +69,12 @@ async def menu(
         if active_category is not None
         else await ProductService(session).get_all_available()
     )
-    _, _, cart_count = await CartService(session).get_summary(client.id)
+    cart_count = 0
+    if client:
+        _, _, cart_count = await CartService(session).get_summary(client.id)
 
     context = {
+        "client": client,
         "products": products,
         "categories": categories,
         "active_category_slug": active_category.slug if active_category else None,
@@ -87,7 +92,7 @@ async def menu(
     response = templates.TemplateResponse(
         request,
         "client/menu.html",
-        {**context, "client": client, "cart_count": cart_count, "flash": flash},
+        {**context, "cart_count": cart_count, "flash": flash},
     )
     response.delete_cookie("flash")
     return response
@@ -96,10 +101,12 @@ async def menu(
 @router.get("/about", response_class=HTMLResponse)
 async def about_page(
     request: Request,
-    client: Client = Depends(require_client_from_cookie),
+    client: Client | None = Depends(optional_client_from_cookie),
     session: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
-    _, _, cart_count = await CartService(session).get_summary(client.id)
+    cart_count = 0
+    if client:
+        _, _, cart_count = await CartService(session).get_summary(client.id)
     return templates.TemplateResponse(
         request,
         "client/about.html",

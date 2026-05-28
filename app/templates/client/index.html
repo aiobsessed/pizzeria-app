@@ -11,6 +11,7 @@
    class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
     Меню
 </a>
+{% if client %}
 <a href="/orders"
    class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
     Заказы
@@ -29,14 +30,31 @@
    class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
     {{ client.name.split()[0] }}
 </a>
+{% else %}
+<a href="/register"
+   class="text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors">
+    Регистрация
+</a>
+<a href="/login"
+   class="text-sm font-medium text-white bg-orange-500 hover:bg-orange-600
+          px-3 py-1.5 rounded-lg transition-colors">
+    Войти
+</a>
+{% endif %}
 {% endblock %}
 
 {% block content %}
 <section class="bg-gradient-to-br from-orange-50 to-amber-50 border-b border-orange-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 text-center">
+        {% if client %}
         <h1 class="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
             Привет, {{ client.name.split()[0] }}! 👋
         </h1>
+        {% else %}
+        <h1 class="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
+            Свежая пицца с доставкой 🍕
+        </h1>
+        {% endif %}
         <p class="text-gray-500 mb-6">Свежая пицца и не только — с доставкой до вашей двери</p>
         <a href="/menu"
            class="inline-block px-6 py-2.5 bg-orange-500 hover:bg-orange-600
